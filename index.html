@@ -444,6 +444,22 @@
   .stat-table tbody tr.hl-blue { background: rgba(76,201,240,0.05); border-left: 2px solid var(--accent-blue); }
   .stat-table tbody tr.hl-red  { background: rgba(196,30,58,0.08);  border-left: 2px solid var(--accent-red-bright); }
   .stat-table tbody tr.hl-gold { background: rgba(255,214,10,0.05); border-left: 2px solid var(--accent-gold); }
+  .stat-table tbody tr.hl-top-venue {
+    background: rgba(255,214,10,0.06); border-left: 2px solid var(--accent-gold);
+    animation: rowIn 0.3s ease forwards, venueTopPulse 2.5s ease-in-out 0.3s infinite;
+  }
+  .stat-table tbody tr.hl-bottom-venue {
+    background: rgba(199,125,255,0.06); border-left: 2px solid var(--accent-purple);
+    animation: rowIn 0.3s ease forwards, venueBottomPulse 2.5s ease-in-out 0.3s infinite;
+  }
+  @keyframes venueTopPulse {
+    0%,100%{ background: rgba(255,214,10,0.04); border-left-color: var(--accent-gold); }
+    50%{ background: rgba(255,214,10,0.12); border-left-color: var(--accent-gold); }
+  }
+  @keyframes venueBottomPulse {
+    0%,100%{ background: rgba(199,125,255,0.04); border-left-color: var(--accent-purple); }
+    50%{ background: rgba(199,125,255,0.12); border-left-color: var(--accent-purple); }
+  }
   @keyframes rowIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
   @keyframes barGrow { from{width:0%} to{width:var(--bar-w)} }
 
@@ -697,30 +713,16 @@
       </div>
     </div>
 
-    <!-- TOP 10 HR VENUES -->
+    <!-- ALL 30 VENUES -->
     <div class="panel">
       <div class="panel-header">
-        <div><div class="panel-title gold">Top 10 HR Venues</div><div class="panel-subtitle">2026 · Triple Threat Eligible</div></div>
-        <div class="panel-count">10</div>
-      </div>
-      <div class="scroll-panel">
-        <table class="stat-table">
-          <thead><tr><th>#</th><th>Venue</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
-          <tbody id="top10-venues-body"><tr><td colspan="4" style="padding:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">Loading...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- TEAM HR LEADERBOARD -->
-    <div class="panel">
-      <div class="panel-header">
-        <div><div class="panel-title" style="color:var(--accent-green)">All 30 Teams — HR</div><div class="panel-subtitle">2026 · Season To Date</div></div>
+        <div><div class="panel-title gold">All 30 Venues — HR</div><div class="panel-subtitle">2026 · 🟡 Top 10 · 🟣 Bottom 10</div></div>
         <div class="panel-count">30</div>
       </div>
-      <div class="scroll-panel">
+      <div class="scroll-panel" style="max-height:500px;">
         <table class="stat-table">
-          <thead><tr><th>#</th><th>Team</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
-          <tbody id="team-hr-body"><tr><td colspan="4" style="padding:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">Loading...</td></tr></tbody>
+          <thead><tr><th>#</th><th>Venue</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
+          <tbody id="all-venues-body"><tr><td colspan="4" style="padding:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -729,7 +731,7 @@
 
   <div class="divider"></div>
 
-  <!-- BOTTOM: KO Pitchers + All 30 Stadiums -->
+  <!-- BOTTOM: KO Pitchers + All 30 Teams side by side -->
   <div class="bottom-grid">
 
     <!-- TOP 25 STRIKEOUT PITCHERS -->
@@ -746,16 +748,17 @@
       </div>
     </div>
 
-    <!-- ALL 30 STADIUMS -->
+    <!-- ALL 30 TEAMS HR -->
     <div class="panel">
       <div class="panel-header">
-        <div>
-          <div class="panel-title gold">All 30 Stadiums — HR Totals</div>
-          <div class="panel-subtitle">2026 · ⭐ = Top 10 Triple Threat Eligible</div>
-        </div>
+        <div><div class="panel-title" style="color:var(--accent-green)">All 30 Teams — HR</div><div class="panel-subtitle">2026 · Season To Date</div></div>
+        <div class="panel-count">30</div>
       </div>
-      <div class="stadiums-inner" id="stadiums-inner">
-        <div style="padding:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">Loading...</div>
+      <div class="scroll-panel" style="max-height:660px;">
+        <table class="stat-table">
+          <thead><tr><th>#</th><th>Team</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
+          <tbody id="team-hr-body"><tr><td colspan="4" style="padding:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">Loading...</td></tr></tbody>
+        </table>
       </div>
     </div>
 
@@ -826,8 +829,8 @@ async function fetchNoHRPitchers() {
   }));
   const hands = await Promise.all(all.map(p=>fetchHandedness(p.id)));
   all.forEach((p,i)=>p.hand=hands[i]);
-  const AL = all.filter(p=>p.league==='A').slice(0,10);
-  const NL = all.filter(p=>p.league==='N').slice(0,10);
+  const AL = all.filter(p=>p.league==='A').slice(0,20);
+  const NL = all.filter(p=>p.league==='N').slice(0,20);
   return { AL, NL };
 }
 
@@ -1252,50 +1255,74 @@ function analyzeMatchups() {
 
 // ── ANALYZE NO HR MATCHUPS ────────────────────────────────────────────
 function analyzeNoHRMatchups() {
-  const bottom5VenueIds = new Set(venues.slice().reverse().slice(0,5).map(v=>v.venueId));
-  const bottom5Venues   = venues.slice().reverse().slice(0,5);
-  const noHRPitcherIds  = new Set([...noHRPitchersAL, ...noHRPitchersNL].map(p=>p.id));
-  const noHRPitcherMap  = Object.fromEntries([...noHRPitchersAL,...noHRPitchersNL].map((p,i)=>[p.id,p]));
-  const noHRTeamIds     = new Set(noHRTeams.map(t=>t.abbr));
+  // Bottom 10 venues by HR allowed
+  const sortedVenues = venues.slice(); // already sorted desc, so reverse for bottom
+  const bottom10VenueIds = new Set(sortedVenues.slice().reverse().slice(0,10).map(v=>v.venueId));
+  const bottom10Venues   = sortedVenues.slice().reverse().slice(0,10);
+
+  // Bottom 10 pitchers fewest HR allowed (AL + NL combined)
+  const noHRPitcherIds = new Set([...noHRPitchersAL,...noHRPitchersNL].map(p=>p.id));
+  const noHRPitcherMap = Object.fromEntries([...noHRPitchersAL,...noHRPitchersNL].map(p=>[p.id,p]));
+
+  // Bottom 10 teams by HR — use noHRTeams which is already bottom 10 sorted asc
+  const noHRTeamAbbrs = new Set(noHRTeams.map(t=>t.abbr));
+
   const alerts = [], seen = new Set();
 
   for (const game of todayGames) {
     if (game.isFinal || game.isLive) continue;
-    const isBottomVenue = bottom5VenueIds.has(game.venueId);
-    const venueData     = bottom5Venues.find(v=>v.venueId===game.venueId);
-    const venueRank     = venueData ? venues.length - venues.slice().reverse().findIndex(v=>v.venueId===game.venueId) : null;
 
-    const pairs = [
-      { pitcherId: game.home.pitcherId, pitcherName: game.home.pitcherName, battingTeamAbbr: game.away.team, battingTeamId: game.away.id },
-      { pitcherId: game.away.pitcherId, pitcherName: game.away.pitcherName, battingTeamAbbr: game.home.team, battingTeamId: game.home.id },
+    const isBottomVenue   = bottom10VenueIds.has(game.venueId);
+    const venueData       = bottom10Venues.find(v=>v.venueId===game.venueId);
+    const venueBottomRank = venueData ? bottom10Venues.indexOf(venueData)+1 : null;
+
+    const awayIsNoHRTeam  = noHRTeamAbbrs.has(game.away.team);
+    const homeIsNoHRTeam  = noHRTeamAbbrs.has(game.home.team);
+    const awayPitcherNoHR = game.away.pitcherId && noHRPitcherIds.has(game.away.pitcherId);
+    const homePitcherNoHR = game.home.pitcherId && noHRPitcherIds.has(game.home.pitcherId);
+    const bothPitchersNoHR = awayPitcherNoHR && homePitcherNoHR;
+
+    // ── DOUBLE THREAT: Bottom 10 batting team + Bottom 10 venue ──
+    // Check each team batting
+    const battingPairs = [
+      { battingTeam: game.away.team, isNoHRTeam: awayIsNoHRTeam },
+      { battingTeam: game.home.team, isNoHRTeam: homeIsNoHRTeam },
     ];
 
-    for (const pair of pairs) {
-      const isNoHRPitcher = pair.pitcherId && noHRPitcherIds.has(pair.pitcherId);
-      const pitcher = isNoHRPitcher ? noHRPitcherMap[pair.pitcherId] : null;
-      const isNoHRTeam = noHRTeamIds.has(pair.battingTeamAbbr);
+    for (const pair of battingPairs) {
+      if (!pair.isNoHRTeam || !isBottomVenue) continue;
 
-      if (!isNoHRPitcher && !isBottomVenue) continue;
+      // Check if this is actually a triple (both pitchers bottom 10 too)
+      const isTriple = bothPitchersNoHR;
 
-      const categoryCount = [isBottomVenue, isNoHRPitcher, isNoHRTeam].filter(Boolean).length;
-      if (categoryCount < 2) continue;
-
-      const key = `nohr-${game.gamePk}-${pair.pitcherId||'nop'}`;
+      const key = `nohr-${game.gamePk}-${pair.battingTeam}-${isTriple?'triple':'double'}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
-      const venueBottom5Rank = bottom5Venues.findIndex(v=>v.venueId===game.venueId)+1;
-
       alerts.push({
-        type: categoryCount >= 3 ? 'nohr-triple' : 'nohr-double',
-        game, pitcher: pitcher||{ id: pair.pitcherId, name: pair.pitcherName||'TBD', hr: 0 },
-        venueData, venueBottom5Rank,
-        isBottomVenue, isNoHRPitcher, isNoHRTeam,
-        battingTeamAbbr: pair.battingTeamAbbr,
+        type: isTriple ? 'nohr-triple' : 'nohr-double',
+        game,
+        battingTeamAbbr: pair.battingTeam,
+        venueData, venueBottomRank,
+        isBottomVenue: true,
+        isNoHRTeam: true,
+        bothPitchersNoHR: isTriple,
+        awayPitcher: { name: game.away.pitcherName||'TBD', id: game.away.pitcherId, isNoHR: awayPitcherNoHR, data: awayPitcherNoHR ? noHRPitcherMap[game.away.pitcherId] : null },
+        homePitcher: { name: game.home.pitcherName||'TBD', id: game.home.pitcherId, isNoHR: homePitcherNoHR, data: homePitcherNoHR ? noHRPitcherMap[game.home.pitcherId] : null },
       });
     }
   }
-  return alerts.sort((a,b)=>(b.type==='nohr-triple')-(a.type==='nohr-triple'));
+
+  // Deduplicate — if both batting teams qualify in same game, show triple only once
+  const gameKeys = new Set();
+  return alerts
+    .sort((a,b)=>(b.type==='nohr-triple')-(a.type==='nohr-triple'))
+    .filter(a=>{
+      const k = `${a.game.gamePk}-${a.type}`;
+      if (gameKeys.has(k)) return false;
+      gameKeys.add(k);
+      return true;
+    });
 }
 
 // ── RENDER NO HR ALERTS ───────────────────────────────────────────────
@@ -1307,17 +1334,31 @@ function renderNoHRAlerts(alerts) {
   }
   c.innerHTML = alerts.map(a=>{
     const cls = a.type==='nohr-triple' ? 'alert-nohr-triple' : 'alert-nohr-double';
-    const pH = a.pitcher?.id ? handednessCache[a.pitcher.id] : null;
-    const pBadge = pH ? `<span class="hand-badge ${pH}" style="font-size:11px;width:20px;height:20px;">${pH}</span>` : '';
-    const venueTag   = a.isBottomVenue   ? `<span class="tag tag-nohr-venue">Bottom 5 Venue · ${a.venueData?.hr||0} HRs</span>` : '';
-    const pitcherTag = a.isNoHRPitcher   ? `<span class="tag tag-nohr-pitcher">Low HR Pitcher · ${a.pitcher?.hr||0} HR allowed</span>` : '';
-    const teamTag    = a.isNoHRTeam      ? `<span class="tag tag-nohr-team">Low HR Team · ${a.battingTeamAbbr}</span>` : '';
-    const tripleTag  = a.type==='nohr-triple' ? `<span class="tag" style="background:rgba(223,0,255,0.15);color:#df00ff;border:1px solid rgba(223,0,255,0.4);">🛡️ ALL 3 CATEGORIES</span>` : '';
+    const awayH = a.awayPitcher?.id ? handednessCache[a.awayPitcher.id] : null;
+    const homeH = a.homePitcher?.id ? handednessCache[a.homePitcher.id] : null;
+    const awayBadge = awayH ? `<span class="hand-badge ${awayH}" style="font-size:11px;width:20px;height:20px;">${awayH}</span>` : '';
+    const homeBadge = homeH ? `<span class="hand-badge ${homeH}" style="font-size:11px;width:20px;height:20px;">${homeH}</span>` : '';
+
+    const venueTag  = `<span class="tag tag-nohr-venue">Bottom 10 Venue · ${a.venueData?.hr||0} HRs</span>`;
+    const teamTag   = `<span class="tag tag-nohr-team">Bottom 10 Team · ${a.battingTeamAbbr}</span>`;
+    const pitchTag  = a.bothPitchersNoHR ? `<span class="tag tag-nohr-pitcher">Both Pitchers Low HR</span>` : '';
+    const tripleTag = a.type==='nohr-triple' ? `<span class="tag" style="background:rgba(223,0,255,0.15);color:#df00ff;border:1px solid rgba(223,0,255,0.4);">🛡️ ALL 3 CATEGORIES</span>` : '';
+
+    const pitcherLine = a.type==='nohr-triple'
+      ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c77dff;margin-top:6px;">
+          ${awayBadge} ${a.awayPitcher?.name||'TBD'} · ${homeBadge} ${a.homePitcher?.name||'TBD'} — Both Low HR Starters
+         </div>`
+      : '';
+
     return `<div class="${cls}">
       <div class="alert-game">${a.game.away.team} @ ${a.game.home.team} · ${a.game.time} · ${a.game.venue}</div>
-      <div class="alert-matchup">${pBadge}<span class="pitcher" style="color:#c77dff;">${a.pitcher?.name||'TBD'}</span><span class="vs">pitching at</span><span style="color:#c77dff;">${a.game.venue}</span></div>
-      ${a.isNoHRTeam ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c77dff;margin-top:4px;">🛡️ ${a.battingTeamAbbr} — Low HR team batting</div>` : ''}
-      <div class="alert-tags" style="margin-top:8px;">${venueTag}${pitcherTag}${teamTag}${tripleTag}</div>
+      <div class="alert-matchup">
+        <span style="color:#c77dff;font-weight:600;">${a.battingTeamAbbr}</span>
+        <span class="vs">batting at</span>
+        <span style="color:#c77dff;">${a.game.venue}</span>
+      </div>
+      ${pitcherLine}
+      <div class="alert-tags" style="margin-top:8px;">${venueTag}${teamTag}${pitchTag}${tripleTag}</div>
     </div>`;
   }).join('');
 }
@@ -1439,15 +1480,25 @@ function renderKOPitchers() {
 }
 
 
-function renderTop10Venues(alertVenueIds) {
-  const top10 = venues.slice(0,10);
-  const max = top10[0]?.hr||1;
-  const ranks = tiedRanks(top10, 'hr');
-  document.getElementById('top10-venues-body').innerHTML = top10.map((v,i)=>{
-    const isAlert = alertVenueIds?.has(v.venueId);
-    return `<tr class="${isAlert?'hl-gold':''}">
+// ── RENDER ALL 30 VENUES (replaces Top 10 panel) ─────────────────────
+function renderAllVenues(alertVenueIds) {
+  const max = venues[0]?.hr||1;
+  const ranks = tiedRanks(venues, 'hr');
+  document.getElementById('all-venues-body').innerHTML = venues.map((v,i)=>{
+    const isTop10    = i < 10;
+    const isBottom10 = i >= 20;
+    const isAlert    = alertVenueIds?.has(v.venueId);
+    let rowClass = '';
+    if (isTop10)    rowClass = 'hl-top-venue';
+    if (isBottom10) rowClass = 'hl-bottom-venue';
+    const star   = isTop10    ? ' <span style="color:var(--accent-gold);font-size:9px;">▲TOP</span>' : '';
+    const bottom = isBottom10 ? ' <span style="color:var(--accent-purple);font-size:9px;">▼BOT</span>' : '';
+    return `<tr class="${rowClass}">
       <td class="rank">${ranks[i]}</td>
-      <td><div class="player-name">${v.name}${isAlert?'<span class="alert-dot"></span>':''}</div><span class="team-badge">${v.team}</span></td>
+      <td>
+        <div class="player-name">${v.name}${star}${bottom}${isAlert?'<span class="alert-dot"></span>':''}</div>
+        <span class="team-badge">${v.team}</span>
+      </td>
       <td class="stat-val gold">${v.hr}</td>
       <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill gold" style="width:${Math.round(v.hr/max*100)}%"></div></div></td>
     </tr>`;
@@ -1718,10 +1769,9 @@ async function initDashboard() {
   if (koPitchers.length) renderKOPitchers();
   else document.getElementById('ko-body').innerHTML = noDataMsg('Season stats loading');
 
-  if (venues.length) { renderTop10Venues(alertVenueIds); renderAllStadiums(); }
+  if (venues.length) { renderAllVenues(alertVenueIds); }
   else {
-    document.getElementById('top10-venues-body').innerHTML = noDataMsg('Venue data loading');
-    document.getElementById('stadiums-inner').innerHTML = `<div style="padding:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">⏳ Venue data will appear once the season begins.</div>`;
+    document.getElementById('all-venues-body').innerHTML = noDataMsg('Venue data loading');
   }
 
   if (teamHRLeaderboard.length) renderTeamHRLeaderboard();
