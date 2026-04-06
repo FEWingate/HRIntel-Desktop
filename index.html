@@ -125,8 +125,48 @@
     100% { transform: translateX(-50%); }
   }
 
-  /* ── LAYOUT ── */
-  .section-wrap { padding: 24px 32px 0; }
+  /* ── HR PROBABILITY SCORE ── */
+  .hrps-wrap {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-top: 1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+  }
+  .hrps-left { flex-shrink: 0; }
+  .hrps-label-top { font-family: 'IBM Plex Mono', monospace; font-size: 8px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 2px; }
+  .hrps-tier-text { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1px; }
+  .hrps-bar-wrap { flex: 1; }
+  .hrps-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .hrps-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+  .hrps-score-big { font-family: 'Bebas Neue', sans-serif; font-size: 38px; line-height: 1; flex-shrink: 0; }
+  .hrps-denom { font-size: 16px; color: var(--text-dim); }
+  .hrps-info-btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim);
+    background: none; border: 1px solid var(--border); border-radius: 50%;
+    width: 18px; height: 18px; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; transition: all 0.15s; padding: 0; line-height: 1;
+  }
+  .hrps-info-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+  /* Legend popup */
+  .hrps-legend {
+    position: fixed; z-index: 200;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; width: 280px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    display: none;
+  }
+  .hrps-legend.open { display: block; }
+  .hrps-legend-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; margin-bottom: 12px; color: var(--text); }
+  .hrps-legend-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(30,37,48,0.5); }
+  .hrps-legend-row:last-of-type { border-bottom: none; }
+  .hrps-legend-score { font-family: 'Bebas Neue', sans-serif; font-size: 18px; width: 32px; flex-shrink: 0; }
+  .hrps-legend-tier { font-family: 'IBM Plex Mono', monospace; font-size: 10px; width: 80px; flex-shrink: 0; }
+  .hrps-legend-desc { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .hrps-legend-factors { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .hrps-legend-factor { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-mid); padding: 3px 0; display: flex; gap: 8px; }
+  .hrps-legend-factor span { color: var(--text-dim); }
+  .hrps-legend-close { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; margin-top: 12px; width: 100%; transition: all 0.15s; }
+  .hrps-legend-close:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
   .section-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 14px; }
   .divider { height: 1px; background: var(--border); margin: 20px 32px 0; }
 
@@ -651,6 +691,26 @@
 </div>
 
 <div class="wrapper">
+
+  <!-- HR PROBABILITY SCORE LEGEND -->
+  <div class="hrps-legend" id="hrpsLegend">
+    <div class="hrps-legend-title">⚾ HR Probability Score</div>
+    <div class="hrps-legend-row"><span class="hrps-legend-score hrps-1">1–3</span><span class="hrps-legend-tier" style="color:#6b7280;">LOW</span><span class="hrps-legend-desc">Few favorable conditions</span></div>
+    <div class="hrps-legend-row"><span class="hrps-legend-score hrps-4">4–5</span><span class="hrps-legend-tier" style="color:var(--accent-blue);">BELOW AVG</span><span class="hrps-legend-desc">1–2 factors present</span></div>
+    <div class="hrps-legend-row"><span class="hrps-legend-score hrps-6">6–7</span><span class="hrps-legend-tier" style="color:var(--accent-gold);">MODERATE</span><span class="hrps-legend-desc">Multiple factors aligning</span></div>
+    <div class="hrps-legend-row"><span class="hrps-legend-score hrps-8">8–9</span><span class="hrps-legend-tier" style="color:var(--accent-orange);">HIGH</span><span class="hrps-legend-desc">Strong HR conditions</span></div>
+    <div class="hrps-legend-row"><span class="hrps-legend-score hrps-10">10</span><span class="hrps-legend-tier" style="color:var(--accent-red);">MAX</span><span class="hrps-legend-desc">All factors aligned — rare</span></div>
+    <div class="hrps-legend-factors">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px;">WHAT GOES INTO THE SCORE</div>
+      <div class="hrps-legend-factor">🏏 <span>Power hitters in the lineup</span></div>
+      <div class="hrps-legend-factor">🥎 <span>HR-prone pitcher on the mound</span></div>
+      <div class="hrps-legend-factor">🏟️ <span>HR-friendly ballpark</span></div>
+      <div class="hrps-legend-factor">🌬️ <span>Wind blowing out + warm temps</span></div>
+      <div class="hrps-legend-factor">🤚 <span>Favorable handedness matchup</span></div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:8px;line-height:1.5;">Score is pregame only — disappears once first pitch is thrown. Updates automatically when lineups post.</div>
+    </div>
+    <button class="hrps-legend-close" onclick="closeLegend()">✕ Close</button>
+  </div>
 
   <!-- HEADER -->
   <header>
@@ -1713,6 +1773,31 @@ async function renderGames(alerts, noHRAlerts) {
     const gAlerts   = gameAlertsMap[game.gamePk]||[];
     const isTop10V  = top10Ids.has(game.venueId);
 
+    // Calculate HR Probability Score
+    // Hide on NO HR threat games — score contradicts the purpose
+    const isNoHRGame = !!noHRThreatMap[game.gamePk];
+    const hrps = !isNoHRGame ? calcHRProbScore(game, hitterIds, hitterMap, pitcherIds, leaders?.awayLeaders, leaders?.homeLeaders) : null;
+
+    // Enforce score floors/caps so threat badges and scores are always consistent
+    if (hrps) {
+      if (threat === 'triple')      { if (hrps.score < 8) hrps.score = 8; } // Triple = 8-10 minimum
+      else if (threat === 'double') { if (hrps.score < 6) hrps.score = 6; } // Double = 6-7 minimum
+      else                          { if (hrps.score > 4) hrps.score = 4; } // No threat = 1-4 max
+    }
+
+    const hrpsHTML = hrps ? `
+      <div class="hrps-wrap">
+        <div class="hrps-left">
+          <div class="hrps-label-top">HR PROBABILITY</div>
+          <div class="hrps-tier-text" style="color:${hrpsColor(hrps.score)};">${hrpsTier(hrps.score)}</div>
+        </div>
+        <div class="hrps-bar-wrap">
+          <div class="hrps-bar"><div class="hrps-fill" style="width:${hrps.score*10}%;background:${hrpsColor(hrps.score)};"></div></div>
+        </div>
+        <div class="hrps-score-big" style="color:${hrpsColor(hrps.score)};">${hrps.score}<span class="hrps-denom">/10</span></div>
+        <button class="hrps-info-btn" onclick="event.stopPropagation();showLegend(this)" title="How is this calculated?">ⓘ</button>
+      </div>` : '';
+
     function leaderRows(arr) {
       return (arr||[]).map(p=>{
         const isTop25 = hitterIds.has(p.id);
@@ -1760,6 +1845,7 @@ async function renderGames(alerts, noHRAlerts) {
           ${noHRThreatMap[game.gamePk]?`<div class="threat-badge ${noHRThreatMap[game.gamePk]}">${noHRThreatMap[game.gamePk]==='nohr-triple'?'⚡ NO HR TRIPLE':'🛡️ NO HR DOUBLE'}</div>`:''}
         </div>
       </div>
+      ${hrpsHTML}
       ${liveScoreHTML(game)}
       <div class="game-card-body">
         <div class="team-section">
@@ -1847,6 +1933,12 @@ async function initDashboard() {
   renderNoHRAlerts(noHRAlerts);
 
   setProgress(94,'LOADING GAME CARDS...');
+
+  // Pre-fetch weather for all games so HR score can use it
+  await Promise.all(todayGames.filter(g=>!g.isLive&&!g.isFinal).map(async g=>{
+    try { g._weather = await fetchWeather(g.venue); } catch(e) { g._weather = null; }
+  }));
+
   await renderGames(alerts, noHRAlerts);
 
   setProgress(100,'DONE');
@@ -1875,7 +1967,117 @@ async function initDashboard() {
   fetchTickerHRData().then(()=>renderHRTicker()).catch(()=>{});
 }
 
-// ── HR TICKER ─────────────────────────────────────────────────────────
+// ── HR PROBABILITY SCORE ──────────────────────────────────────────────
+function calcHRProbScore(game, hitterIds, hitterMap, pitcherIds, awayLeaders, homeLeaders) {
+  if (game.isLive || game.isFinal) return null;
+
+  let score = 0;
+  const breakdown = [];
+
+  // ── Factor 1: Power hitters (max 4pts) ──
+  // Use team leaders data — lineup may not be posted yet
+  const allLeaders = [...(awayLeaders||[]), ...(homeLeaders||[])];
+  const top25InGame = allLeaders.filter(p => hitterIds.has(p.id));
+  const rankedInGame = top25InGame.map(p => hitterMap[p.id]).filter(Boolean).sort((a,b)=>a.rank-b.rank);
+
+  if (rankedInGame.length) {
+    const bestRank = rankedInGame[0].rank;
+    if (bestRank <= 5)       { score += 3; breakdown.push('⚾ Top 5 HR hitter (+3)'); }
+    else if (bestRank <= 10) { score += 2; breakdown.push('⚾ Top 10 HR hitter (+2)'); }
+    else                     { score += 1; breakdown.push('⚾ Top 25 HR hitter (+1)'); }
+    if (rankedInGame.length >= 3)      { score += 1; breakdown.push('⚾ 3+ power hitters (+1)'); }
+    else if (rankedInGame.length === 2) { score += 0.5; breakdown.push('⚾ 2 power hitters (+0.5)'); }
+  }
+
+  // ── Factor 2: HR-prone pitcher (max 2pts) ──
+  const awayPitcherId = game.away.pitcherId;
+  const homePitcherId = game.home.pitcherId;
+  const pitcherRanks = [awayPitcherId, homePitcherId]
+    .filter(id => id && pitcherIds.has(id))
+    .map(id => hrPitchers.findIndex(p=>p.id===id)+1)
+    .filter(r => r > 0);
+
+  if (pitcherRanks.length) {
+    const best = Math.min(...pitcherRanks);
+    if (best <= 5)       { score += 2; breakdown.push('🥎 Top 5 HR pitcher (+2)'); }
+    else if (best <= 10) { score += 1.5; breakdown.push('🥎 Top 10 HR pitcher (+1.5)'); }
+    else                 { score += 1; breakdown.push('🥎 Top 25 HR pitcher (+1)'); }
+  }
+
+  // ── Factor 3: Venue HR rating (max 2pts) ──
+  const venueIdx = venues.findIndex(v=>v.venueId===game.venueId);
+  if (venueIdx !== -1) {
+    if (venueIdx < 5)       { score += 2; breakdown.push('🏟️ Top 5 HR venue (+2)'); }
+    else if (venueIdx < 10) { score += 1; breakdown.push('🏟️ Top 10 HR venue (+1)'); }
+  }
+
+  // ── Factor 4: Weather (max 2pts) ──
+  const weather = game._weather;
+  if (weather) {
+    let wScore = 0;
+    const tempNum = parseInt(weather.temp)||0;
+    const windSpeedNum = parseInt(weather.wind)||0;
+    const outDirs = ['N','NNE','NE','NNW','NW'];
+    const isOut = outDirs.includes(weather.windDir||'');
+    if (isOut) { wScore += 1; breakdown.push('🌬️ Wind blowing out (+1)'); }
+    if (tempNum >= 75) { wScore += 0.5; breakdown.push('☀️ Warm temps (+0.5)'); }
+    else if (tempNum >= 65) { wScore += 0.25; }
+    if (isOut && windSpeedNum >= 12) { wScore += 0.5; breakdown.push('💨 Strong wind out (+0.5)'); }
+    score += Math.min(wScore, 2);
+  }
+
+  // ── Factor 5: Handedness mismatch (max 1pt) ──
+  let handBonus = 0;
+  for (const [pitcherId, opposingLeaders] of [
+    [awayPitcherId, homeLeaders||[]],
+    [homePitcherId, awayLeaders||[]]
+  ]) {
+    if (!pitcherId) continue;
+    const ph = handednessCache[pitcherId];
+    if (!ph) continue;
+    const count = opposingLeaders.filter(p=>{
+      const bh = batHandCache[p.id];
+      return bh && bh !== ph && bh !== 'S';
+    }).length;
+    if (count >= 2) { handBonus = 1; breakdown.push('🤚 Handedness advantage (+1)'); break; }
+    else if (count === 1) handBonus = Math.max(handBonus, 0.5);
+  }
+  score += handBonus;
+
+  return { score: Math.min(10, Math.max(1, Math.round(score))), breakdown };
+}
+
+function hrpsColor(score) {
+  if (score <= 3) return '#6b7280';
+  if (score <= 5) return 'var(--accent-blue)';
+  if (score <= 7) return 'var(--accent-gold)';
+  if (score <= 9) return 'var(--accent-orange)';
+  return 'var(--accent-red)';
+}
+
+function hrpsTier(score) {
+  if (score <= 3) return 'LOW';
+  if (score <= 5) return 'BELOW AVG';
+  if (score <= 7) return 'MODERATE';
+  if (score <= 9) return 'HIGH';
+  return 'MAX ⚡';
+}
+
+function showLegend(btn) {
+  const legend = document.getElementById('hrpsLegend');
+  const rect = btn.getBoundingClientRect();
+  legend.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+  legend.style.left = Math.min(rect.left, window.innerWidth - 300) + 'px';
+  legend.classList.add('open');
+  setTimeout(()=>document.addEventListener('click', closeLegendOutside), 10);
+}
+function closeLegend() {
+  document.getElementById('hrpsLegend').classList.remove('open');
+  document.removeEventListener('click', closeLegendOutside);
+}
+function closeLegendOutside(e) {
+  if (!document.getElementById('hrpsLegend').contains(e.target)) closeLegend();
+}
 function renderHRTicker() {
   const track = document.getElementById('hrTickerTrack');
   const label = document.getElementById('hrTickerLabel');
@@ -1920,17 +2122,11 @@ function renderHRTicker() {
         </span>`;
       });
     } else {
+      // Games live but no HRs yet — show blank with message, no scrolling
       label.innerHTML = `<span style="color:var(--accent-green);margin-right:6px;">● LIVE!</span> HR Leaders`;
-      items = hitters.slice(0,15).map(p => {
-        const tc = tickerTeamColor(p.team);
-        const tcLight = tc + "44";
-        return `<span class="hr-ticker-item">
-          <span class="ticker-name">${p.name}</span>
-          <span class="ticker-dot">·</span>
-          <span class="ticker-season">${p.hr} HR</span>
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${tc};border:1px solid ${tcLight};padding:1px 5px;border-radius:3px;">${p.team}</span>
-        </span>`;
-      });
+      track.innerHTML = `<span class="hr-ticker-item" style="color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;">No home runs yet today — check back soon</span>`;
+      track.style.animation = 'none';
+      return;
     }
   } else {
     // Pre-game — show season HR leaders as filler
@@ -1949,13 +2145,20 @@ function renderHRTicker() {
 
   if (!items.length) return;
 
-  // Double the items so the scroll loops seamlessly
   const html = [...items, ...items].join('');
   track.innerHTML = html;
+  track.style.animation = '';
 
-  // Adjust animation speed based on item count
-  const duration = Math.max(20, items.length * 4);
-  track.style.animationDuration = `${duration}s`;
+  if (items.length >= 3) {
+    // Enough players — scroll smoothly
+    const duration = Math.max(20, items.length * 4);
+    track.style.animationDuration = `${duration}s`;
+    track.style.animationName = 'tickerScroll';
+  } else {
+    // 1-2 players — no scrolling, just display statically
+    track.style.animationName = 'none';
+    track.innerHTML = items.join(''); // no need to double
+  }
 }
 
 // ── TICKER TODAY HR DATA (called during live refresh) ─────────────────
