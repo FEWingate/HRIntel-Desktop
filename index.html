@@ -658,6 +658,131 @@
   .threat-badge.nohr-triple { background: #df00ff; color: #000; animation: threatPulse 2s ease-in-out infinite; }
   .threat-badge.nohr-double { background: #c77dff; color: #000; animation: threatPulse 2.5s ease-in-out infinite; }
 
+  /* ── SIDEBAR ── */
+  .app-layout { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 260px; flex-shrink: 0;
+    background: #0d0f14;
+    border-right: 1px solid var(--border);
+    position: sticky; top: 0; height: 100vh;
+    overflow-y: auto; overflow-x: hidden;
+    display: flex; flex-direction: column;
+    z-index: 50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .sidebar-section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-section-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+    letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  }
+  .sidebar-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Search */
+  .sidebar-search {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .sidebar-search::placeholder { color: var(--text-dim); }
+  .sidebar-search:focus { border-color: var(--accent-blue); }
+  .search-results { margin-top: 6px; max-height: 200px; overflow-y: auto; }
+  .search-result-item {
+    padding: 6px 8px; border-radius: 4px; cursor: pointer;
+    font-size: 11px; color: var(--text-mid); transition: background 0.15s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .search-result-item:hover { background: var(--surface2); color: var(--text); }
+  .search-result-team { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); }
+
+  /* Threat summary */
+  .threat-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .threat-summary-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px; text-align: center;
+  }
+  .threat-summary-count { font-family: 'Bebas Neue', sans-serif; font-size: 32px; line-height: 1; }
+  .threat-summary-label { font-family: 'IBM Plex Mono', monospace; font-size: 8px; letter-spacing: 1px; color: var(--text-dim); margin-top: 2px; }
+
+  /* HR Score Rankings */
+  .score-rank-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; border-bottom: 1px solid rgba(30,37,48,0.5);
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .score-rank-item:last-child { border-bottom: none; }
+  .score-rank-item:hover { opacity: 0.75; }
+  .score-rank-matchup { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-mid); flex: 1; }
+  .score-rank-num { font-family: 'Bebas Neue', sans-serif; font-size: 22px; line-height: 1; flex-shrink: 0; }
+
+  /* Live HR Feed */
+  .hr-feed-item {
+    padding: 6px 0; border-bottom: 1px solid rgba(30,37,48,0.5);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .hr-feed-item:last-child { border-bottom: none; }
+  .hr-feed-name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .hr-feed-meta { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .hr-feed-empty { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); font-style: italic; }
+
+  /* Team Rosters */
+  .team-roster-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 5px; cursor: pointer;
+    transition: background 0.15s; margin-bottom: 2px;
+  }
+  .team-roster-item:hover { background: var(--surface); }
+  .team-roster-name { font-size: 12px; font-weight: 600; color: var(--text); flex: 1; }
+  .team-roster-abbr { font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+  .team-roster-arrow { color: var(--text-dim); font-size: 10px; transition: transform 0.2s; }
+  .team-roster-item.open .team-roster-arrow { transform: rotate(90deg); }
+
+  .roster-players { display: none; padding: 4px 0 4px 16px; }
+  .roster-players.open { display: block; }
+  .roster-player {
+    padding: 5px 8px; font-size: 11px; color: var(--text-mid);
+    cursor: pointer; border-radius: 4px; transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .roster-player:hover { background: var(--surface2); color: var(--text); }
+  .roster-player-pos { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); width: 24px; flex-shrink: 0; }
+  .roster-player-num { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); width: 20px; flex-shrink: 0; text-align: right; }
+  .roster-loading { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); padding: 8px; }
+
+  /* Main content */
+  .main-content { flex: 1; min-width: 0; overflow: hidden; }
+
+  /* Mobile hamburger */
+  .sidebar-toggle {
+    display: none; background: none; border: 1px solid var(--border);
+    color: var(--text-mid); border-radius: 4px; padding: 6px 10px;
+    cursor: pointer; font-size: 16px; line-height: 1;
+    transition: all 0.2s;
+  }
+  .sidebar-toggle:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 49;
+  }
+  .sidebar-overlay.open { display: block; }
+
+  @media (max-width: 1100px) {
+    .sidebar {
+      position: fixed; left: -260px; top: 0; height: 100vh;
+      z-index: 50; transition: left 0.3s ease;
+    }
+    .sidebar.open { left: 0; }
+    .sidebar-toggle { display: flex; align-items: center; justify-content: center; }
+    .main-content { width: 100%; }
+  }
+
   /* Season note */
   .season-note { background: rgba(76,201,240,0.06); border: 1px solid rgba(76,201,240,0.2); border-radius: 6px; padding: 10px 16px; margin: 16px 32px 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mid); display: none; }
   .season-note.visible { display: block; }
@@ -714,7 +839,9 @@
 
   <!-- HEADER -->
   <header>
-    <div class="header-left"></div>
+    <div class="header-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Menu">☰</button>
+    </div>
     <div class="logo">
       <span class="logo-main">HR INTEL</span>
       <span class="logo-tag">MLB · 2026 LIVE</span>
@@ -735,6 +862,68 @@
       </div>
     </div>
   </div>
+
+  <!-- SIDEBAR OVERLAY (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+  <!-- APP LAYOUT: sidebar + main -->
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- SEARCH -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">🔍 Player Search</div>
+        <input class="sidebar-search" id="sidebarSearch" type="text" placeholder="Search any player..." oninput="handlePlayerSearch(this.value)">
+        <div class="search-results" id="searchResults"></div>
+      </div>
+
+      <!-- TODAY'S THREATS -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">⚡ Today's Threats</div>
+        <div class="threat-summary-grid">
+          <div class="threat-summary-card">
+            <div class="threat-summary-count" id="sidebarTripleCount" style="color:var(--accent-gold);">—</div>
+            <div class="threat-summary-label">HR TRIPLE</div>
+          </div>
+          <div class="threat-summary-card">
+            <div class="threat-summary-count" id="sidebarDoubleCount" style="color:var(--accent-orange);">—</div>
+            <div class="threat-summary-label">HR DOUBLE</div>
+          </div>
+          <div class="threat-summary-card">
+            <div class="threat-summary-count" id="sidebarNoHRTripleCount" style="color:#df00ff;">—</div>
+            <div class="threat-summary-label">NO HR ⚡</div>
+          </div>
+          <div class="threat-summary-card">
+            <div class="threat-summary-count" id="sidebarNoHRDoubleCount" style="color:#c77dff;">—</div>
+            <div class="threat-summary-label">NO HR 🛡️</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HR SCORE RANKINGS -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">📊 HR Score Rankings</div>
+        <div id="sidebarScoreRankings"><div class="hr-feed-empty">Loading...</div></div>
+      </div>
+
+      <!-- LIVE HR FEED -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">🔴 Live HR Feed</div>
+        <div id="sidebarHRFeed"><div class="hr-feed-empty">No HRs yet today</div></div>
+      </div>
+
+      <!-- TEAM ROSTERS -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">📋 Team Rosters</div>
+        <div id="sidebarRosters"><div class="hr-feed-empty">Loading teams...</div></div>
+      </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
 
   <!-- GAME SLATE -->
   <div class="section-wrap" style="padding-bottom:8px;">
@@ -852,6 +1041,9 @@
   <footer>
     <span class="footer-note" id="footerNote">DATA: MLB STATS API (statsapi.mlb.com) · AUTO-REFRESHES EVERY 4 HOURS</span>
   </footer>
+
+    </div><!-- end main-content -->
+  </div><!-- end app-layout -->
 
 </div><!-- end wrapper -->
 
@@ -1871,7 +2063,11 @@ async function initDashboard() {
   document.getElementById('refreshBtn').disabled = true;
   setStatus('loading','LOADING');
   const now = new Date();
-  document.getElementById('todayDate').textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  try {
+    document.getElementById('todayDate').textContent = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  } catch(e) {}
+
+  try {
 
   const noDataMsg = (label) => `<tr><td colspan="5" style="padding:16px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">⏳ ${label} — data will appear once the season begins.</td></tr>`;
 
@@ -1943,12 +2139,6 @@ async function initDashboard() {
 
   setProgress(100,'DONE');
 
-  if ('Notification' in window && Notification.permission==='granted') {
-    alerts.filter(a=>a.type==='triple').forEach(t=>{
-      new Notification('⚡ TRIPLE THREAT — HR Intel', {body:`${t.hitter?.name} vs ${t.pitcher?.name} at ${t.game.venue} · ${t.game.time}`});
-    });
-  }
-
   const month = now.getMonth()+1;
   const note = document.getElementById('seasonNote');
   if (note && month<=4) {
@@ -1962,9 +2152,34 @@ async function initDashboard() {
   hideLoading();
   document.getElementById('refreshBtn').disabled = false;
 
-  // Render ticker non-blocking — doesn't hold up the dashboard
-  renderHRTicker(); // show leaders immediately
-  fetchTickerHRData().then(()=>renderHRTicker()).catch(()=>{});
+  // ── Sidebar + ticker — non-blocking, nothing here can crash the dashboard ──
+  try { updateSidebarThreats(alerts, noHRAlerts); } catch(e) { console.warn('sidebar threats failed',e); }
+  try { buildPlayerIndex(); } catch(e) { console.warn('player index failed',e); }
+  try { buildRosterList(); } catch(e) { console.warn('roster list failed',e); }
+  try {
+    const hitterIds2  = new Set(hitters.map(h=>h.id));
+    const hitterMap2  = Object.fromEntries(hitters.map((h,i)=>[h.id,{...h,rank:i+1}]));
+    const pitcherIds2 = new Set(hrPitchers.map(p=>p.id));
+    const gameScores2 = todayGames
+      .filter(g=>!g.isLive&&!g.isFinal)
+      .map(g=>{
+        const hrps = calcHRProbScore(g, hitterIds2, hitterMap2, pitcherIds2, [], []);
+        return { away:g.away.team, home:g.home.team, score:hrps?.score||null };
+      });
+    updateSidebarScoreRankings(gameScores2);
+  } catch(e) { console.warn('score rankings failed',e); }
+
+  // Ticker — non-blocking
+  renderHRTicker();
+  fetchTickerHRData().then(()=>{ renderHRTicker(); updateSidebarHRFeed(); }).catch(()=>{});
+
+  } catch(e) {
+    // Safety net — if anything crashes, still hide the loading screen
+    console.error('initDashboard error:', e);
+    setStatus('error','ERROR');
+    hideLoading();
+    document.getElementById('refreshBtn').disabled = false;
+  }
 }
 
 // ── HR PROBABILITY SCORE ──────────────────────────────────────────────
@@ -2078,6 +2293,155 @@ function closeLegend() {
 function closeLegendOutside(e) {
   if (!document.getElementById('hrpsLegend').contains(e.target)) closeLegend();
 }
+
+// ── SIDEBAR ───────────────────────────────────────────────────────────
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
+
+function updateSidebarThreats(alerts, noHRAlerts) {
+  const triples  = alerts.filter(a=>a.type==='triple').length;
+  const doubles  = alerts.filter(a=>a.type==='double').length;
+  const noHRTrip = (noHRAlerts||[]).filter(a=>a.type==='nohr-triple').length;
+  const noHRDbl  = (noHRAlerts||[]).filter(a=>a.type==='nohr-double').length;
+  document.getElementById('sidebarTripleCount').textContent     = triples;
+  document.getElementById('sidebarDoubleCount').textContent     = doubles;
+  document.getElementById('sidebarNoHRTripleCount').textContent = noHRTrip;
+  document.getElementById('sidebarNoHRDoubleCount').textContent = noHRDbl;
+}
+
+function updateSidebarScoreRankings(gameScores) {
+  const el = document.getElementById('sidebarScoreRankings');
+  if (!gameScores || !gameScores.length) {
+    el.innerHTML = `<div class="hr-feed-empty">No pregame scores yet</div>`; return;
+  }
+  el.innerHTML = gameScores
+    .filter(g => g.score !== null)
+    .sort((a,b) => b.score - a.score)
+    .map(g => `
+      <div class="score-rank-item">
+        <div class="score-rank-matchup">${g.away} @ ${g.home}</div>
+        <div class="score-rank-num" style="color:${hrpsColor(g.score)};">${g.score}</div>
+      </div>`).join('');
+}
+
+function updateSidebarHRFeed() {
+  const el = document.getElementById('sidebarHRFeed');
+  const allHitters = [];
+  for (const game of todayGames) {
+    if (!game._tickerData) continue;
+    for (const p of game._tickerData) {
+      if (p.todayHR > 0) allHitters.push(p);
+    }
+  }
+  if (!allHitters.length) {
+    el.innerHTML = `<div class="hr-feed-empty">No HRs yet today</div>`; return;
+  }
+  el.innerHTML = allHitters.sort((a,b)=>b.todayHR-a.todayHR).map(p => {
+    const tc = tickerTeamColor(p.team);
+    return `<div class="hr-feed-item">
+      <div class="hr-feed-name">${p.name} <span style="color:${tc};font-size:10px;font-weight:700;">${p.team}</span></div>
+      <div class="hr-feed-meta">${p.todayHR} HR today · ${p.seasonHR} season</div>
+    </div>`;
+  }).join('');
+}
+
+// ── PLAYER SEARCH ─────────────────────────────────────────────────────
+let allPlayers = [];
+function buildPlayerIndex() {
+  allPlayers = [];
+  for (const p of hitters)    allPlayers.push({ name:p.name, team:p.team, id:p.id });
+  for (const p of hrPitchers) { if (!allPlayers.find(x=>x.id===p.id)) allPlayers.push({ name:p.name, team:p.team, id:p.id }); }
+  for (const p of koPitchers) { if (!allPlayers.find(x=>x.id===p.id)) allPlayers.push({ name:p.name, team:p.team, id:p.id }); }
+}
+
+function handlePlayerSearch(val) {
+  const el = document.getElementById('searchResults');
+  if (!val || val.length < 2) { el.innerHTML = ''; return; }
+  const q = val.toLowerCase();
+  const matches = allPlayers.filter(p=>p.name.toLowerCase().includes(q)).slice(0,8);
+  if (!matches.length) { el.innerHTML = `<div class="search-result-item" style="color:var(--text-dim);">No results found</div>`; return; }
+  el.innerHTML = matches.map(p => {
+    const tc = tickerTeamColor(p.team);
+    return `<div class="search-result-item" onclick="openGameModal(${p.id})">
+      <span style="flex:1;">${p.name}</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:${tc};">${p.team}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── TEAM ROSTERS ──────────────────────────────────────────────────────
+const MLB_TEAMS = [
+  {id:109,name:'Arizona Diamondbacks',abbr:'ARI'},{id:144,name:'Atlanta Braves',abbr:'ATL'},
+  {id:110,name:'Baltimore Orioles',abbr:'BAL'},{id:111,name:'Boston Red Sox',abbr:'BOS'},
+  {id:112,name:'Chicago Cubs',abbr:'CHC'},{id:145,name:'Chicago White Sox',abbr:'CWS'},
+  {id:113,name:'Cincinnati Reds',abbr:'CIN'},{id:114,name:'Cleveland Guardians',abbr:'CLE'},
+  {id:115,name:'Colorado Rockies',abbr:'COL'},{id:116,name:'Detroit Tigers',abbr:'DET'},
+  {id:117,name:'Houston Astros',abbr:'HOU'},{id:118,name:'Kansas City Royals',abbr:'KC'},
+  {id:108,name:'Los Angeles Angels',abbr:'LAA'},{id:119,name:'Los Angeles Dodgers',abbr:'LAD'},
+  {id:146,name:'Miami Marlins',abbr:'MIA'},{id:158,name:'Milwaukee Brewers',abbr:'MIL'},
+  {id:142,name:'Minnesota Twins',abbr:'MIN'},{id:121,name:'New York Mets',abbr:'NYM'},
+  {id:147,name:'New York Yankees',abbr:'NYY'},{id:133,name:'Oakland Athletics',abbr:'ATH'},
+  {id:143,name:'Philadelphia Phillies',abbr:'PHI'},{id:134,name:'Pittsburgh Pirates',abbr:'PIT'},
+  {id:135,name:'San Diego Padres',abbr:'SD'},{id:137,name:'San Francisco Giants',abbr:'SF'},
+  {id:136,name:'Seattle Mariners',abbr:'SEA'},{id:138,name:'St. Louis Cardinals',abbr:'STL'},
+  {id:139,name:'Tampa Bay Rays',abbr:'TB'},{id:140,name:'Texas Rangers',abbr:'TEX'},
+  {id:141,name:'Toronto Blue Jays',abbr:'TOR'},{id:120,name:'Washington Nationals',abbr:'WSH'}
+];
+
+function buildRosterList() {
+  const el = document.getElementById('sidebarRosters');
+  el.innerHTML = MLB_TEAMS.map(team => {
+    const tc = tickerTeamColor(team.abbr);
+    return `<div class="team-roster-item" id="roster-btn-${team.id}" onclick="toggleRoster(${team.id},'${team.abbr}')">
+      <span class="team-roster-abbr" style="color:${tc};border:1px solid ${tc}44;">${team.abbr}</span>
+      <span class="team-roster-name">${team.name}</span>
+      <span class="team-roster-arrow">›</span>
+    </div>
+    <div class="roster-players" id="roster-${team.id}"></div>`;
+  }).join('');
+}
+
+const rosterCache = {};
+async function toggleRoster(teamId, abbr) {
+  const btn   = document.getElementById(`roster-btn-${teamId}`);
+  const panel = document.getElementById(`roster-${teamId}`);
+  const isOpen = panel.classList.contains('open');
+
+  // Close all others
+  document.querySelectorAll('.roster-players.open').forEach(el=>el.classList.remove('open'));
+  document.querySelectorAll('.team-roster-item.open').forEach(el=>el.classList.remove('open'));
+
+  if (isOpen) return;
+  btn.classList.add('open');
+  panel.classList.add('open');
+
+  if (rosterCache[teamId]) { renderRoster(panel, rosterCache[teamId], abbr); return; }
+
+  panel.innerHTML = `<div class="roster-loading">Loading roster...</div>`;
+  try {
+    const d = await fetchJSON(`${BASE}/teams/${teamId}/roster?rosterType=active&season=${SEASON}`);
+    const posOrder = {P:0,C:1,'1B':2,'2B':3,'3B':4,SS:5,LF:6,CF:7,RF:8,DH:9,OF:10};
+    const roster = (d.roster||[]).sort((a,b)=>(posOrder[a.position?.abbreviation]??99)-(posOrder[b.position?.abbreviation]??99));
+    rosterCache[teamId] = roster;
+    renderRoster(panel, roster, abbr);
+  } catch(e) { panel.innerHTML = `<div class="roster-loading">Could not load roster</div>`; }
+}
+
+function renderRoster(panel, roster, abbr) {
+  const tc = tickerTeamColor(abbr);
+  panel.innerHTML = roster.map(p => `
+    <div class="roster-player">
+      <span class="roster-player-pos" style="color:${tc};">${p.position?.abbreviation||'—'}</span>
+      <span style="flex:1;">${p.person?.fullName||'—'}</span>
+      <span class="roster-player-num">#${p.jerseyNumber||'—'}</span>
+    </div>`).join('') || `<div class="roster-loading">No roster data</div>`;
+}
+
+// ── HR TICKER ─────────────────────────────────────────────────────────
 function renderHRTicker() {
   const track = document.getElementById('hrTickerTrack');
   const label = document.getElementById('hrTickerLabel');
@@ -2690,6 +3054,7 @@ setInterval(async () => {
       for (const g of todayGames) { if (g.isLive || g.isFinal) g._tickerData = null; }
       await fetchTickerHRData();
       renderHRTicker();
+      updateSidebarHRFeed();
     } catch(e) { console.warn('Ticker refresh failed', e); }
 
   } catch(e) { console.warn('Score refresh failed', e); }
