@@ -7,20 +7,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0c0f;
-    --surface: #111318;
-    --surface2: #181c23;
-    --border: #1e2530;
+    --bg: #080a0e;
+    --surface: #0d1017;
+    --surface2: #111828;
+    --border: #1a1f2e;
+    --border2: #1e2638;
     --accent-red: #e63946;
-    --accent-orange: #f4a261;
+    --accent-orange: #f59e0b;
     --accent-gold: #ffd60a;
     --accent-blue: #4cc9f0;
-    --accent-purple: #c77dff;
+    --accent-purple: #a78bfa;
     --accent-green: #4ade80;
-    --text: #e8eaf0;
-    --text-dim: #6b7280;
-    --text-mid: #9ca3af;
-    --triple-glow: 0 0 30px rgba(255,214,10,0.25), 0 0 60px rgba(230,57,70,0.15);
+    --text: #f0f0f0;
+    --text-dim: #4b5563;
+    --text-mid: #6b7280;
+    --triple-glow: 0 0 24px rgba(255,214,10,0.15), 0 0 48px rgba(230,57,70,0.08);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,65 +34,148 @@
     overflow-x: hidden;
   }
 
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none; z-index: 0;
-  }
+
 
   .wrapper { position: relative; z-index: 1; }
 
   /* ── LOADING ── */
-  .loading-screen {
-    position: fixed; inset: 0; background: var(--bg); z-index: 999;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
-    transition: opacity 0.5s ease;
+  /* ── LANDING PAGE ── */
+  .landing-screen {
+    position: fixed; inset: 0; background: #080a0e; z-index: 999;
+    display: flex; flex-direction: column;
+    transition: opacity 0.6s ease;
+    overflow: hidden;
   }
-  .loading-screen.hidden { opacity: 0; pointer-events: none; }
-  .loading-title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 6px; }
-  .loading-status { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--text-dim); letter-spacing: 2px; }
-  .loading-bar-wrap { width: 300px; height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+  .landing-screen.hidden { opacity: 0; pointer-events: none; }
+
+  .landing-header {
+    padding: 20px 40px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .landing-logo { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 4px; }
+  .landing-logo span { color: var(--accent-blue); }
+  .landing-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 2px; }
+
+  .landing-body {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px 24px; text-align: center; gap: 28px;
+  }
+
+  .landing-eyebrow {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    letter-spacing: 3px; color: var(--accent-blue); text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .landing-eyebrow::before, .landing-eyebrow::after {
+    content: ''; width: 32px; height: 1px; background: var(--accent-blue); opacity: 0.4;
+  }
+
+  .landing-headline {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 8vw, 96px);
+    letter-spacing: 4px; line-height: 0.95;
+    color: #fff;
+  }
+  .landing-headline .hl-blue { color: var(--accent-blue); }
+  .landing-headline .hl-gold { color: var(--accent-gold); }
+
+  .landing-tagline {
+    font-family: 'IBM Plex Mono', monospace; font-size: 15px;
+    color: var(--text-mid); letter-spacing: 1px; line-height: 1.6;
+  }
+  .landing-tagline strong { color: var(--text); font-weight: 600; }
+
+  .landing-features {
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    max-width: 700px;
+  }
+  .landing-feature-pill {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;
+    letter-spacing: 1px; padding: 7px 14px; border-radius: 20px;
+    border: 1px solid var(--border2); color: var(--text-mid);
+    background: var(--surface); white-space: nowrap;
+  }
+  .landing-feature-pill.blue  { border-color: rgba(76,201,240,0.3);  color: var(--accent-blue);   background: rgba(76,201,240,0.06); }
+  .landing-feature-pill.gold  { border-color: rgba(255,214,10,0.3);  color: var(--accent-gold);   background: rgba(255,214,10,0.06); }
+  .landing-feature-pill.orange{ border-color: rgba(245,158,11,0.3);  color: var(--accent-orange); background: rgba(245,158,11,0.06); }
+  .landing-feature-pill.green { border-color: rgba(74,222,128,0.3);  color: var(--accent-green);  background: rgba(74,222,128,0.06); }
+  .landing-feature-pill.purple{ border-color: rgba(167,139,250,0.3); color: var(--accent-purple); background: rgba(167,139,250,0.06); }
+  .landing-feature-pill.red   { border-color: rgba(230,57,70,0.3);   color: var(--accent-red);    background: rgba(230,57,70,0.06); }
+
+  .landing-loading {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    margin-top: 8px;
+  }
+  .landing-loading-bar {
+    width: 200px; height: 2px; background: var(--border);
+    border-radius: 1px; overflow: hidden;
+  }
+  .landing-loading-fill {
+    height: 100%; background: var(--accent-blue);
+    border-radius: 1px; width: 0%; transition: width 0.4s ease;
+  }
+  .landing-loading-status {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    color: var(--text-dim); letter-spacing: 2px;
+  }
+
+  .landing-footer {
+    padding: 16px 40px; border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    color: var(--text-dim); letter-spacing: 1px; gap: 24px;
+  }
+  .landing-footer-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border2); }
+
+  /* Keep progress bar for internal use */
   .loading-bar-fill { height: 100%; background: var(--accent-blue); border-radius: 1px; width: 0%; transition: width 0.4s ease; }
 
   /* ── HEADER ── */
   header {
-    border-bottom: 1px solid var(--border); padding: 0 32px;
-    display: grid; grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    height: 72px; background: rgba(10,12,15,0.95); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border); padding: 0 20px;
+    display: flex; align-items: center; gap: 16px;
+    height: 54px; background: rgba(8,10,14,0.97); backdrop-filter: blur(16px);
     position: sticky; top: 0; z-index: 100;
   }
-  .logo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-  .logo-main { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; line-height: 1; }
-  .logo-tag { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--accent-red); letter-spacing: 2px; }
-  .header-left { display: flex; align-items: center; }
-  .header-right { display: flex; align-items: center; gap: 20px; justify-content: flex-end; }
+  .logo { display: flex; align-items: center; }
+  .logo-main { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; line-height: 1; white-space: nowrap; }
+  .logo-tag { display: none; }
+  .header-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .header-right { display: flex; align-items: center; gap: 14px; margin-left: auto; flex-shrink: 0; }
   .last-updated { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
-  .live-dot { display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--accent-green); letter-spacing: 1px; }
-  .live-dot::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); animation: pulse 2s ease-in-out infinite; }
+  .live-dot { display: flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--accent-green); letter-spacing: 1px; }
+  .live-dot::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green); animation: pulse 2s ease-in-out infinite; }
   .live-dot.loading { color: var(--accent-gold); }
   .live-dot.loading::before { background: var(--accent-gold); }
   .live-dot.error { color: var(--accent-red); }
   .live-dot.error::before { background: var(--accent-red); animation: none; }
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
 
-  .refresh-btn {
-    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px;
-    padding: 8px 20px; background: transparent; border: 1px solid var(--border);
-    color: var(--text-mid); border-radius: 4px; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+  /* ── TOP NAV PILLS ── */
+  .top-nav { display: flex; gap: 2px; flex: 1; justify-content: center; }
+  .top-nav-btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+    padding: 6px 18px; border-radius: 20px; border: 1px solid transparent;
+    background: transparent; color: var(--text-mid); cursor: pointer;
+    transition: all 0.15s; letter-spacing: 0.5px;
   }
-  .refresh-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+  .top-nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .top-nav-btn.active { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+
+  .refresh-btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px;
+    padding: 6px 14px; background: var(--surface); border: 1px solid var(--border2);
+    color: var(--text-mid); border-radius: 8px; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+  }
+  .refresh-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: rgba(76,201,240,0.05); }
   .refresh-btn:disabled { opacity: .4; cursor: not-allowed; }
 
   /* ── HR TICKER ── */
   .hr-ticker-wrap {
     background: rgba(255,214,10,0.04);
     border-bottom: 1px solid rgba(255,214,10,0.15);
-    overflow: hidden; height: 36px;
+    overflow: hidden; height: 32px;
     display: flex; align-items: center;
     position: relative;
   }
@@ -168,22 +252,23 @@
   .hrps-legend-close { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; margin-top: 12px; width: 100%; transition: all 0.15s; }
   .hrps-legend-close:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
   .section-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 14px; }
-  .divider { height: 1px; background: var(--border); margin: 20px 32px 0; }
+  .divider { height: 1px; background: var(--border); margin: 20px 24px 0; }
 
   /* ── GAME SLATE ── */
-  .games-scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; }
-  .games-scroll::-webkit-scrollbar { height: 10px; }
-  .games-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 5px; }
-  .games-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.7); border-radius: 5px; }
-  .games-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,1); }
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px; padding-bottom: 16px;
+  }
+  .top-nav-section { display: block; }
 
   .game-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; min-width: 300px; max-width: 300px;
-    flex-shrink: 0; overflow: hidden; transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+    border-radius: 12px; width: 100%;
+    overflow: hidden; transition: border-color 0.2s, transform 0.15s;
     cursor: pointer;
   }
-  .game-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .game-card:hover { border-color: var(--border2); transform: translateY(-1px); }
   .game-card.triple-game { border-color: var(--accent-gold); box-shadow: 0 0 16px rgba(255,214,10,0.15); animation: hrTripleBorder 2s ease-in-out infinite; }
   .game-card.double-game { border-color: rgba(244,162,97,0.5); animation: hrDoubleBorder 2.5s ease-in-out infinite; }
   .game-card.triple-game:hover { box-shadow: 0 8px 32px rgba(255,214,10,0.25); }
@@ -366,7 +451,7 @@
     color: var(--text-dim); letter-spacing: 2px;
   }
 
-  .game-card-header { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .game-card-header { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
   .game-teams { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; }
   .game-teams .away { color: var(--text-mid); }
   .game-teams .home { color: var(--text); }
@@ -475,15 +560,13 @@
   .no-alerts { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-dim); letter-spacing: 1px; padding: 16px 0; }
 
   /* ── LEADERBOARD GRID (4 columns) ── */
-  .boards-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; padding: 24px 32px 0; }
+  .boards-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 20px 24px 0; }
 
   .panel {
-    background: linear-gradient(160deg, #12152a 0%, #0d0f1a 100%);
-    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
-    border-top: 2px solid var(--accent-red);
-    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
   }
-  .panel-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; }
+  .panel-header { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; }
   .panel-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; line-height: 1; }
   .panel-title.blue { color: var(--accent-blue); }
   .panel-title.red  { color: var(--accent-red); }
@@ -496,8 +579,8 @@
   .stat-table thead tr { background: var(--surface2); }
   .stat-table thead th { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; padding: 7px 10px; text-align: left; font-weight: 600; }
   .stat-table thead th.right { text-align: right; }
-  .stat-table tbody tr { border-bottom: 1px solid rgba(30,37,48,0.6); transition: background 0.15s; animation: rowIn 0.3s ease forwards; opacity: 0; }
-  .stat-table tbody tr:hover { background: var(--surface2); }
+  .stat-table tbody tr { border-bottom: 1px solid rgba(26,31,46,0.7); transition: background 0.15s; animation: rowIn 0.3s ease forwards; opacity: 0; }
+  .stat-table tbody tr:hover { background: rgba(255,255,255,0.02); }
   .stat-table tbody tr.hl-blue { background: rgba(76,201,240,0.05); border-left: 2px solid var(--accent-blue); }
   .stat-table tbody tr.hl-red  { background: rgba(230,57,70,0.05);  border-left: 2px solid var(--accent-red); }
   .stat-table tbody tr.hl-gold { background: rgba(255,214,10,0.05); border-left: 2px solid var(--accent-gold); }
@@ -531,7 +614,7 @@
   .stat-val.gold { color: var(--accent-gold); }
   .stat-val.purple { color: var(--accent-purple); }
   .bar-cell { width: 60px; padding-right: 10px; }
-  .mini-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .mini-bar { height: 2px; background: var(--border2); border-radius: 2px; overflow: hidden; }
   .mini-bar-fill { height: 100%; border-radius: 2px; animation: fillBar 0.8s ease forwards; }
   .mini-bar-fill.blue   { background: var(--accent-blue); }
   .mini-bar-fill.red    { background: var(--accent-red); }
@@ -582,7 +665,7 @@
   .venue-rank-num { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: rgba(196,30,58,0.2); line-height: 1; }
 
   /* ── BOTTOM SECTION: KO Pitchers + All Stadiums ── */
-  .bottom-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; padding: 20px 32px 48px; }
+  .bottom-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; padding: 20px 24px 48px; }
 
   /* All 30 stadiums 3-col layout */
   .stadiums-inner { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
@@ -663,7 +746,7 @@
 
   .sidebar {
     width: 260px; flex-shrink: 0;
-    background: #0d0f14;
+    background: var(--surface);
     border-right: 1px solid var(--border);
     position: sticky; top: 0; height: 100vh;
     overflow-y: auto; overflow-x: hidden;
@@ -793,10 +876,63 @@
 </head>
 <body>
 
-<div class="loading-screen" id="loadingScreen">
-  <div class="loading-title">HR INTEL</div>
-  <div class="loading-status" id="loadingStatus">CONNECTING TO MLB API...</div>
-  <div class="loading-bar-wrap"><div class="loading-bar-fill" id="loadingBar"></div></div>
+<div class="landing-screen" id="loadingScreen">
+
+  <!-- Landing Header -->
+  <div class="landing-header">
+    <div>
+      <div class="landing-logo">HR <span>INTEL</span></div>
+      <div class="landing-tag">MLB · 2026 LIVE</div>
+    </div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;">FREE · NO LOGIN REQUIRED</div>
+  </div>
+
+  <!-- Landing Body -->
+  <div class="landing-body">
+
+    <div class="landing-eyebrow">MLB 2026 Season</div>
+
+    <div class="landing-headline">
+      Live <span class="hl-blue">HR</span><br>
+      Intelligence
+    </div>
+
+    <div class="landing-tagline">
+      <strong>Every Game. Every Edge.</strong><br>
+      Real-time home run tracking, threat alerts, and probability scores<br>
+      for every MLB game — all in one place.
+    </div>
+
+    <div class="landing-features">
+      <div class="landing-feature-pill blue">⚡ Live HR Tracker</div>
+      <div class="landing-feature-pill gold">🔶 Triple Threat Alerts</div>
+      <div class="landing-feature-pill orange">🔶 Double Threat Alerts</div>
+      <div class="landing-feature-pill green">📊 HR Probability Score</div>
+      <div class="landing-feature-pill blue">🏆 Top 25 HR Hitters</div>
+      <div class="landing-feature-pill red">🥎 Top 25 HR Pitchers</div>
+      <div class="landing-feature-pill gold">🏟️ All 30 Venues</div>
+      <div class="landing-feature-pill purple">🛡️ NO HR Threat System</div>
+      <div class="landing-feature-pill green">📋 Full MLB Rosters</div>
+    </div>
+
+    <div class="landing-loading">
+      <div class="landing-loading-bar">
+        <div class="landing-loading-fill" id="loadingBar"></div>
+      </div>
+      <div class="landing-loading-status" id="loadingStatus">CONNECTING TO MLB API...</div>
+    </div>
+
+  </div>
+
+  <!-- Landing Footer -->
+  <div class="landing-footer">
+    <span>DATA: MLB STATS API</span>
+    <div class="landing-footer-dot"></div>
+    <span>UPDATES EVERY 60 SECONDS</span>
+    <div class="landing-footer-dot"></div>
+    <span>FREE · NO ADS</span>
+  </div>
+
 </div>
 
 <!-- GAME DETAIL MODAL -->
@@ -841,11 +977,17 @@
   <header>
     <div class="header-left">
       <button class="sidebar-toggle" onclick="toggleSidebar()" title="Menu">☰</button>
+      <div class="logo">
+        <span class="logo-main">HR <span style="color:var(--accent-blue);">INTEL</span></span>
+      </div>
     </div>
-    <div class="logo">
-      <span class="logo-main">HR INTEL</span>
-      <span class="logo-tag">MLB · 2026 LIVE</span>
-    </div>
+    <nav class="top-nav" id="topNav">
+      <button class="top-nav-btn active" onclick="switchTopNav('games',this)">Games</button>
+      <button class="top-nav-btn" onclick="switchTopNav('threats',this)">Threats</button>
+      <button class="top-nav-btn" onclick="switchTopNav('leaders',this)">Leaders</button>
+      <button class="top-nav-btn" onclick="switchTopNav('venues',this)">Venues</button>
+      <button class="top-nav-btn" onclick="switchTopNav('pitching',this)">Pitching</button>
+    </nav>
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
       <span class="live-dot loading" id="liveStatus">LOADING</span>
@@ -925,13 +1067,18 @@
     <!-- MAIN CONTENT -->
     <div class="main-content">
 
-  <!-- GAME SLATE -->
+  <!-- GAMES SECTION -->
+  <div id="section-games" class="top-nav-section">
   <div class="section-wrap" style="padding-bottom:8px;">
     <div class="section-label">📅 Today's Game Slate — <span id="todayDate">—</span></div>
-    <div class="games-scroll" id="gamesContainer">
+    <div class="games-grid" id="gamesContainer">
       <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);padding:20px 0;">Loading schedule...</div>
     </div>
   </div>
+  </div><!-- end section-games -->
+
+  <!-- THREATS SECTION -->
+  <div id="section-threats" class="top-nav-section" style="display:none;">
 
   <div class="divider"></div>
 
@@ -950,14 +1097,18 @@
     </div>
   </div>
 
+  </div><!-- end section-threats -->
+
+  <!-- LEADERS SECTION -->
+  <div id="section-leaders" class="top-nav-section" style="display:none;">
   <div class="divider"></div>
 
-  <!-- TOP 4 LEADERBOARDS: HR Hitters | HR Allowed | (blank/future) | Top 10 Venues -->
+  <!-- TOP 4 LEADERBOARDS: HR Hitters | HR Allowed | Top 10 Venues -->
   <div class="section-wrap" style="padding-bottom:0;">
     <div class="section-label">📊 Season Leaderboards</div>
   </div>
 
-  <div class="boards-grid">
+  <div class="boards-grid" style="grid-template-columns:1fr 1fr;">
 
     <!-- TOP 25 HR HITTERS -->
     <div class="panel">
@@ -987,56 +1138,81 @@
       </div>
     </div>
 
-    <!-- ALL 30 VENUES -->
+    <!-- ALL 30 VENUES (hidden reference table for mirror) -->
+    <div style="display:none;">
+      <table><tbody id="all-venues-body"></tbody></table>
+      <table><tbody id="team-hr-body"></tbody></table>
+      <table><tbody id="ko-body"></tbody></table>
+    </div>
+
+  </div><!-- end boards-grid -->
+  </div><!-- end section-leaders -->
+
+  <!-- VENUES SECTION -->
+  <div id="section-venues" class="top-nav-section" style="display:none;">
+  <div class="section-wrap" style="padding-bottom:0;">
+    <div class="section-label">🏟️ All 30 Venues — HR Totals</div>
+  </div>
+  <div class="boards-grid" style="grid-template-columns:1fr 1fr;">
     <div class="panel">
       <div class="panel-header">
         <div><div class="panel-title gold">All 30 Venues — HR</div><div class="panel-subtitle">2026 · 🟡 Top 10 · 🟣 Bottom 10</div></div>
         <div class="panel-count">30</div>
       </div>
-      <div class="scroll-panel" style="max-height:500px;">
+      <div class="scroll-panel" style="max-height:600px;">
         <table class="stat-table">
           <thead><tr><th>#</th><th>Venue</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
-          <tbody id="all-venues-body"><tr><td colspan="4" style="padding:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">Loading...</td></tr></tbody>
+          <tbody id="all-venues-body-v2"></tbody>
         </table>
       </div>
     </div>
-
-  </div><!-- end boards-grid -->
-
-  <div class="divider"></div>
-
-  <!-- BOTTOM: KO Pitchers + All 30 Teams side by side -->
-  <div class="bottom-grid">
-
-    <!-- TOP 25 STRIKEOUT PITCHERS -->
-    <div class="panel">
-      <div class="panel-header">
-        <div><div class="panel-title" style="color:var(--accent-purple)">Top 25 Strikeout Pitchers</div><div class="panel-subtitle">2026 · Season To Date</div></div>
-        <div class="panel-count">25</div>
-      </div>
-      <div class="scroll-panel" style="max-height:660px;">
-        <table class="stat-table">
-          <thead><tr><th>#</th><th colspan="2">Pitcher</th><th class="right">K</th><th class="right">K/G</th><th class="bar-cell"></th></tr></thead>
-          <tbody id="ko-body"><tr><td colspan="6" style="padding:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">Loading...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ALL 30 TEAMS HR -->
     <div class="panel">
       <div class="panel-header">
         <div><div class="panel-title" style="color:var(--accent-green)">All 30 Teams — HR</div><div class="panel-subtitle">2026 · Season To Date</div></div>
         <div class="panel-count">30</div>
       </div>
-      <div class="scroll-panel" style="max-height:660px;">
+      <div class="scroll-panel" style="max-height:600px;">
         <table class="stat-table">
           <thead><tr><th>#</th><th>Team</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
-          <tbody id="team-hr-body"><tr><td colspan="4" style="padding:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">Loading...</td></tr></tbody>
+          <tbody id="team-hr-body-v2"></tbody>
         </table>
       </div>
     </div>
+  </div>
+  </div><!-- end section-venues -->
 
-  </div><!-- end bottom-grid -->
+  <!-- PITCHING SECTION -->
+  <div id="section-pitching" class="top-nav-section" style="display:none;">
+  <div class="section-wrap" style="padding-bottom:0;">
+    <div class="section-label">🥎 Pitching Stats</div>
+  </div>
+  <div class="boards-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="panel">
+      <div class="panel-header">
+        <div><div class="panel-title red">Top 25 HR Allowed</div><div class="panel-subtitle">2026 · Pitchers · Season To Date</div></div>
+        <div class="panel-count">25</div>
+      </div>
+      <div class="scroll-panel" style="max-height:600px;">
+        <table class="stat-table">
+          <thead><tr><th>#</th><th colspan="2">Pitcher</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
+          <tbody id="pitchers-body-v2"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div><div class="panel-title" style="color:var(--accent-purple)">Top 25 Strikeout Pitchers</div><div class="panel-subtitle">2026 · Season To Date</div></div>
+        <div class="panel-count">25</div>
+      </div>
+      <div class="scroll-panel" style="max-height:600px;">
+        <table class="stat-table">
+          <thead><tr><th>#</th><th colspan="2">Pitcher</th><th class="right">K</th><th class="right">K/G</th><th class="bar-cell"></th></tr></thead>
+          <tbody id="ko-body-v2"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </div><!-- end section-pitching -->
 
   <footer>
     <span class="footer-note" id="footerNote">DATA: MLB STATS API (statsapi.mlb.com) · AUTO-REFRESHES EVERY 4 HOURS</span>
@@ -1196,10 +1372,16 @@ function setStatus(cls, txt) {
   el.className = 'live-dot '+cls;
   el.textContent = txt;
 }
+const _landingShownAt = Date.now();
 function hideLoading() {
   const ls = document.getElementById('loadingScreen');
-  ls.classList.add('hidden');
-  setTimeout(()=>ls.style.display='none', 600);
+  const elapsed = Date.now() - _landingShownAt;
+  const minDisplay = 10000; // 10 seconds minimum landing page view
+  const remaining = Math.max(0, minDisplay - elapsed);
+  setTimeout(() => {
+    ls.classList.add('hidden');
+    setTimeout(() => ls.style.display = 'none', 650);
+  }, remaining);
 }
 
 // Hand badge HTML
@@ -2295,6 +2477,37 @@ function closeLegendOutside(e) {
 }
 
 // ── SIDEBAR ───────────────────────────────────────────────────────────
+// ── TOP NAV ───────────────────────────────────────────────────────────
+function switchTopNav(tab, btn) {
+  // Hide all sections
+  document.querySelectorAll('.top-nav-section').forEach(s => s.style.display = 'none');
+  // Deactivate all nav buttons
+  document.querySelectorAll('.top-nav-btn').forEach(b => b.classList.remove('active'));
+  // Show selected section
+  const section = document.getElementById('section-' + tab);
+  if (section) section.style.display = 'block';
+  // Activate clicked button
+  if (btn) btn.classList.add('active');
+
+  // Mirror venue/pitching tables from existing rendered data if needed
+  if (tab === 'venues') {
+    const srcV = document.getElementById('all-venues-body');
+    const dstV = document.getElementById('all-venues-body-v2');
+    if (srcV && dstV && !dstV.children.length) dstV.innerHTML = srcV.innerHTML;
+    const srcT = document.getElementById('team-hr-body');
+    const dstT = document.getElementById('team-hr-body-v2');
+    if (srcT && dstT && !dstT.children.length) dstT.innerHTML = srcT.innerHTML;
+  }
+  if (tab === 'pitching') {
+    const srcP = document.getElementById('pitchers-body');
+    const dstP = document.getElementById('pitchers-body-v2');
+    if (srcP && dstP && !dstP.children.length) dstP.innerHTML = srcP.innerHTML;
+    const srcK = document.getElementById('ko-body');
+    const dstK = document.getElementById('ko-body-v2');
+    if (srcK && dstK && !dstK.children.length) dstK.innerHTML = srcK.innerHTML;
+  }
+}
+
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebarOverlay');
