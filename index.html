@@ -741,6 +741,134 @@
   .threat-badge.nohr-triple { background: #df00ff; color: #000; animation: threatPulse 2s ease-in-out infinite; }
   .threat-badge.nohr-double { background: #c77dff; color: #000; animation: threatPulse 2.5s ease-in-out infinite; }
 
+  /* ── PLAYER HEADSHOT ── */
+  .player-headshot-wrap {
+    width: 80px; height: 100px; border-radius: 10px;
+    overflow: hidden; flex-shrink: 0;
+    border: 2px solid var(--border2);
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .player-headshot { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+  .player-headshot-fallback {
+    width: 100%; height: 100%; display: flex;
+    align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+
+  /* ── PLAYER STAT CARDS ── */
+  .player-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+  .player-stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 8px; text-align: center; }
+  .player-stat-card .ps-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
+  .player-stat-card .ps-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--text); }
+
+  /* ── TEAM MODAL COMPONENTS ── */
+  .team-stat-pill {
+    flex: 1; padding: 10px 12px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--text-mid); text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .team-stat-pill:last-child { border-right: none; }
+  .team-section-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+    letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase;
+  }
+  .dim-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 64px;
+  }
+  .dim-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
+  .dim-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--text); }
+
+  /* Roster table inside team modal */
+  .roster-table { width: 100%; border-collapse: collapse; }
+  .roster-table thead th {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px;
+    color: var(--text-dim); text-transform: uppercase; padding: 6px 8px;
+    text-align: left; border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .roster-table tbody tr { border-bottom: 1px solid rgba(26,31,46,0.6); transition: background 0.15s; }
+  .roster-table tbody tr:hover { background: var(--surface2); cursor: pointer; }
+  .roster-table tbody tr:last-child { border-bottom: none; }
+  .roster-table td { padding: 7px 8px; font-size: 12px; }
+  .roster-pos { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; width: 36px; }
+  .roster-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); width: 32px; text-align: right; }
+  .roster-name { color: var(--text); font-weight: 600; }
+  .roster-bats { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .roster-div-row td {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px;
+    color: var(--text-dim); text-transform: uppercase; padding: 8px 8px 4px;
+    background: rgba(255,255,255,0.01);
+  }
+  .sidebar-mlb-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 8px; border-radius: 8px; cursor: pointer;
+    transition: background 0.15s; color: var(--text);
+    border: 1px solid var(--border2); background: var(--surface2);
+  }
+  .sidebar-mlb-btn:hover { background: var(--border2); border-color: var(--accent-blue); }
+  .sidebar-mlb-icon { font-size: 16px; }
+  .sidebar-mlb-label { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; flex: 1; }
+  .sidebar-mlb-arrow { color: var(--text-dim); font-size: 18px; transition: all 0.2s; }
+  .sidebar-mlb-btn:hover .sidebar-mlb-arrow { transform: translateX(3px); color: var(--accent-blue); }
+
+  /* ── MLB MODAL ── */
+  .mlb-modal-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(5,6,18,0.85); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease; padding: 20px;
+  }
+  .mlb-modal-overlay.open { opacity: 1; pointer-events: all; }
+  .mlb-modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; width: 100%; max-width: 860px;
+    max-height: 88vh; overflow-y: auto;
+    transform: translateY(20px) scale(0.98);
+    transition: transform 0.25s ease;
+  }
+  .mlb-modal-overlay.open .mlb-modal { transform: translateY(0) scale(1); }
+  .mlb-modal::-webkit-scrollbar { width: 4px; }
+  .mlb-modal::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .mlb-modal-header {
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  .mlb-modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 2px; }
+  .mlb-modal-close {
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    background: none; border: 1px solid var(--border2); color: var(--text-mid);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; transition: all 0.15s;
+  }
+  .mlb-modal-close:hover { border-color: var(--accent-red); color: var(--accent-red); }
+  .mlb-modal-body { display: grid; grid-template-columns: 1fr 1fr; }
+  .mlb-league-col { padding: 20px 24px; }
+  .mlb-league-col:first-child { border-right: 1px solid var(--border); }
+  .mlb-league-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 3px; margin-bottom: 16px; }
+  .mlb-division { margin-bottom: 20px; }
+  .mlb-division-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+    letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase;
+    margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+  .mlb-team-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    transition: background 0.15s; margin-bottom: 2px;
+  }
+  .mlb-team-row:hover { background: var(--surface2); }
+  .mlb-team-row:hover .mlb-team-arrow { transform: translateX(3px); color: var(--text); }
+  .mlb-team-abbr {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px; border: 1px solid;
+    flex-shrink: 0; min-width: 36px; text-align: center;
+  }
+  .mlb-team-name { font-size: 13px; color: var(--text); flex: 1; }
+  .mlb-team-arrow { color: var(--text-dim); font-size: 16px; transition: all 0.15s; flex-shrink: 0; }
+
   /* ── SIDEBAR ── */
   .app-layout { display: flex; min-height: 100vh; }
 
@@ -1008,7 +1136,163 @@
   <!-- SIDEBAR OVERLAY (mobile) -->
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-  <!-- APP LAYOUT: sidebar + main -->
+  <!-- MLB MODAL -->
+  <div class="mlb-modal-overlay" id="mlbModalOverlay" onclick="closeMLBModal(event)">
+    <div class="mlb-modal" id="mlbModal">
+      <div class="mlb-modal-header">
+        <div class="mlb-modal-title">⚾ MLB Teams</div>
+        <button class="mlb-modal-close" onclick="closeMLBModal()">✕</button>
+      </div>
+      <div class="mlb-modal-body">
+
+        <!-- AMERICAN LEAGUE -->
+        <div class="mlb-league-col">
+          <div class="mlb-league-title" style="color:var(--accent-blue);">American League</div>
+          <div class="mlb-division">
+            <div class="mlb-division-title">AL East</div>
+            <div class="mlb-team-row" onclick="openTeamModal('BAL','Baltimore Orioles')"><span class="mlb-team-abbr" style="color:#ff7733;border-color:rgba(255,119,51,0.3);">BAL</span><span class="mlb-team-name">Baltimore Orioles</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('BOS','Boston Red Sox')"><span class="mlb-team-abbr" style="color:#e05060;border-color:rgba(224,80,96,0.3);">BOS</span><span class="mlb-team-name">Boston Red Sox</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('NYY','New York Yankees')"><span class="mlb-team-abbr" style="color:#7799cc;border-color:rgba(119,153,204,0.3);">NYY</span><span class="mlb-team-name">New York Yankees</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('TB','Tampa Bay Rays')"><span class="mlb-team-abbr" style="color:#6699dd;border-color:rgba(102,153,221,0.3);">TB</span><span class="mlb-team-name">Tampa Bay Rays</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('TOR','Toronto Blue Jays')"><span class="mlb-team-abbr" style="color:#5588ee;border-color:rgba(85,136,238,0.3);">TOR</span><span class="mlb-team-name">Toronto Blue Jays</span><span class="mlb-team-arrow">›</span></div>
+          </div>
+          <div class="mlb-division">
+            <div class="mlb-division-title">AL Central</div>
+            <div class="mlb-team-row" onclick="openTeamModal('CWS','Chicago White Sox')"><span class="mlb-team-abbr" style="color:#aabbcc;border-color:rgba(170,187,204,0.3);">CWS</span><span class="mlb-team-name">Chicago White Sox</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('CLE','Cleveland Guardians')"><span class="mlb-team-abbr" style="color:#4499cc;border-color:rgba(68,153,204,0.3);">CLE</span><span class="mlb-team-name">Cleveland Guardians</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('DET','Detroit Tigers')"><span class="mlb-team-abbr" style="color:#5588bb;border-color:rgba(85,136,187,0.3);">DET</span><span class="mlb-team-name">Detroit Tigers</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('KC','Kansas City Royals')"><span class="mlb-team-abbr" style="color:#6699cc;border-color:rgba(102,153,204,0.3);">KC</span><span class="mlb-team-name">Kansas City Royals</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('MIN','Minnesota Twins')"><span class="mlb-team-abbr" style="color:#4477cc;border-color:rgba(68,119,204,0.3);">MIN</span><span class="mlb-team-name">Minnesota Twins</span><span class="mlb-team-arrow">›</span></div>
+          </div>
+          <div class="mlb-division">
+            <div class="mlb-division-title">AL West</div>
+            <div class="mlb-team-row" onclick="openTeamModal('HOU','Houston Astros')"><span class="mlb-team-abbr" style="color:#5599ff;border-color:rgba(85,153,255,0.3);">HOU</span><span class="mlb-team-name">Houston Astros</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('LAA','Los Angeles Angels')"><span class="mlb-team-abbr" style="color:#e84060;border-color:rgba(232,64,96,0.3);">LAA</span><span class="mlb-team-name">Los Angeles Angels</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('ATH','Oakland Athletics')"><span class="mlb-team-abbr" style="color:#44aa66;border-color:rgba(68,170,102,0.3);">ATH</span><span class="mlb-team-name">Oakland Athletics</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('SEA','Seattle Mariners')"><span class="mlb-team-abbr" style="color:#4499aa;border-color:rgba(68,153,170,0.3);">SEA</span><span class="mlb-team-name">Seattle Mariners</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('TEX','Texas Rangers')"><span class="mlb-team-abbr" style="color:#5577cc;border-color:rgba(85,119,204,0.3);">TEX</span><span class="mlb-team-name">Texas Rangers</span><span class="mlb-team-arrow">›</span></div>
+          </div>
+        </div>
+
+        <!-- NATIONAL LEAGUE -->
+        <div class="mlb-league-col">
+          <div class="mlb-league-title" style="color:var(--accent-red);">National League</div>
+          <div class="mlb-division">
+            <div class="mlb-division-title">NL East</div>
+            <div class="mlb-team-row" onclick="openTeamModal('ATL','Atlanta Braves')"><span class="mlb-team-abbr" style="color:#e84070;border-color:rgba(232,64,112,0.3);">ATL</span><span class="mlb-team-name">Atlanta Braves</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('MIA','Miami Marlins')"><span class="mlb-team-abbr" style="color:#33bbee;border-color:rgba(51,187,238,0.3);">MIA</span><span class="mlb-team-name">Miami Marlins</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('NYM','New York Mets')"><span class="mlb-team-abbr" style="color:#4488ee;border-color:rgba(68,136,238,0.3);">NYM</span><span class="mlb-team-name">New York Mets</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('PHI','Philadelphia Phillies')"><span class="mlb-team-abbr" style="color:#ee4455;border-color:rgba(238,68,85,0.3);">PHI</span><span class="mlb-team-name">Philadelphia Phillies</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('WSH','Washington Nationals')"><span class="mlb-team-abbr" style="color:#ee4444;border-color:rgba(238,68,68,0.3);">WSH</span><span class="mlb-team-name">Washington Nationals</span><span class="mlb-team-arrow">›</span></div>
+          </div>
+          <div class="mlb-division">
+            <div class="mlb-division-title">NL Central</div>
+            <div class="mlb-team-row" onclick="openTeamModal('CHC','Chicago Cubs')"><span class="mlb-team-abbr" style="color:#5588ee;border-color:rgba(85,136,238,0.3);">CHC</span><span class="mlb-team-name">Chicago Cubs</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('CIN','Cincinnati Reds')"><span class="mlb-team-abbr" style="color:#e83030;border-color:rgba(232,48,48,0.3);">CIN</span><span class="mlb-team-name">Cincinnati Reds</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('MIL','Milwaukee Brewers')"><span class="mlb-team-abbr" style="color:#ffcc44;border-color:rgba(255,204,68,0.3);">MIL</span><span class="mlb-team-name">Milwaukee Brewers</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('PIT','Pittsburgh Pirates')"><span class="mlb-team-abbr" style="color:#ffcc33;border-color:rgba(255,204,51,0.3);">PIT</span><span class="mlb-team-name">Pittsburgh Pirates</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('STL','St. Louis Cardinals')"><span class="mlb-team-abbr" style="color:#e84455;border-color:rgba(232,68,85,0.3);">STL</span><span class="mlb-team-name">St. Louis Cardinals</span><span class="mlb-team-arrow">›</span></div>
+          </div>
+          <div class="mlb-division">
+            <div class="mlb-division-title">NL West</div>
+            <div class="mlb-team-row" onclick="openTeamModal('ARI','Arizona Diamondbacks')"><span class="mlb-team-abbr" style="color:#e05070;border-color:rgba(224,80,112,0.3);">ARI</span><span class="mlb-team-name">Arizona Diamondbacks</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('COL','Colorado Rockies')"><span class="mlb-team-abbr" style="color:#8888dd;border-color:rgba(136,136,221,0.3);">COL</span><span class="mlb-team-name">Colorado Rockies</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('LAD','Los Angeles Dodgers')"><span class="mlb-team-abbr" style="color:#4499dd;border-color:rgba(68,153,221,0.3);">LAD</span><span class="mlb-team-name">Los Angeles Dodgers</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('SD','San Diego Padres')"><span class="mlb-team-abbr" style="color:#bb9966;border-color:rgba(187,153,102,0.3);">SD</span><span class="mlb-team-name">San Diego Padres</span><span class="mlb-team-arrow">›</span></div>
+            <div class="mlb-team-row" onclick="openTeamModal('SF','San Francisco Giants')"><span class="mlb-team-abbr" style="color:#ff7744;border-color:rgba(255,119,68,0.3);">SF</span><span class="mlb-team-name">San Francisco Giants</span><span class="mlb-team-arrow">›</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM MODAL -->
+  <div class="mlb-modal-overlay" id="teamModalOverlay" onclick="closeTeamModal(event)">
+    <div class="mlb-modal" id="teamModal" style="max-width:680px;">
+      <div class="mlb-modal-header" id="teamModalHeader">
+        <div class="mlb-modal-title" id="teamModalTitle">Team</div>
+        <button class="mlb-modal-close" onclick="closeTeamModal()">✕</button>
+      </div>
+
+      <!-- TEAM QUICK STATS BAR -->
+      <div id="teamModalStats" style="display:flex;gap:0;border-bottom:1px solid var(--border);">
+        <div class="team-stat-pill" id="tmVenue">🏟️ —</div>
+        <div class="team-stat-pill" id="tmSurface">🌿 —</div>
+        <div class="team-stat-pill" id="tmRoof">☁️ —</div>
+        <div class="team-stat-pill" id="tmCapacity">👥 —</div>
+      </div>
+
+      <!-- PARK DIMENSIONS -->
+      <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
+        <div class="team-section-label">🏟️ Park Dimensions</div>
+        <div id="teamModalDimensions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+          <div class="dim-card"><div class="dim-label">LF</div><div class="dim-val" id="dimLF">—</div></div>
+          <div class="dim-card"><div class="dim-label">LC</div><div class="dim-val" id="dimLC">—</div></div>
+          <div class="dim-card"><div class="dim-label">CF</div><div class="dim-val" id="dimCF">—</div></div>
+          <div class="dim-card"><div class="dim-label">RC</div><div class="dim-val" id="dimRC">—</div></div>
+          <div class="dim-card"><div class="dim-label">RF</div><div class="dim-val" id="dimRF">—</div></div>
+          <div class="dim-card" id="dimHRCard" style="display:none;"><div class="dim-label">HR 2026</div><div class="dim-val" style="color:var(--accent-gold);" id="dimHR">—</div></div>
+        </div>
+      </div>
+
+      <!-- ROSTER -->
+      <div style="padding:16px 24px;">
+        <div class="team-section-label">📋 Active Roster</div>
+        <input class="sidebar-search" id="rosterSearch" type="text" placeholder="Search roster..." oninput="filterRoster(this.value)" style="margin:10px 0 8px;width:100%;">
+        <div id="teamModalRoster" style="margin-top:4px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:20px 0;text-align:center;">Loading roster...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PLAYER MODAL -->
+  <div class="mlb-modal-overlay" id="playerModalOverlay" onclick="closePlayerModal(event)">
+    <div class="mlb-modal" id="playerModal" style="max-width:560px;">
+      <div class="mlb-modal-header" id="playerModalHeader" style="padding:16px 24px;">
+        <div style="display:flex;align-items:center;gap:16px;flex:1;">
+          <!-- Headshot -->
+          <div class="player-headshot-wrap">
+            <img id="playerHeadshot" class="player-headshot" src="" alt="Player" onerror="this.style.display='none';document.getElementById('playerHeadshotFallback').style.display='flex';">
+            <div id="playerHeadshotFallback" class="player-headshot-fallback" style="display:none;">⚾</div>
+          </div>
+          <!-- Name + Meta -->
+          <div>
+            <div class="mlb-modal-title" id="playerModalName">Player</div>
+            <div id="playerModalMeta" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:3px;letter-spacing:1px;">—</div>
+          </div>
+        </div>
+        <button class="mlb-modal-close" onclick="closePlayerModal()">✕</button>
+      </div>
+
+      <!-- PLAYER QUICK STATS -->
+      <div id="playerQuickStats" style="display:flex;gap:0;border-bottom:1px solid var(--border);">
+        <div class="team-stat-pill" id="plAge">🎂 —</div>
+        <div class="team-stat-pill" id="plHeight">📏 —</div>
+        <div class="team-stat-pill" id="plWeight">⚖️ —</div>
+        <div class="team-stat-pill" id="plBorn">📍 —</div>
+      </div>
+
+      <!-- SEASON STATS -->
+      <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
+        <div class="team-section-label">📊 2026 Season Stats</div>
+        <div id="playerSeasonStats" style="margin-top:12px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading stats...</div>
+        </div>
+      </div>
+
+      <!-- CAREER STATS -->
+      <div style="padding:16px 24px;">
+        <div class="team-section-label">🏆 Career Stats</div>
+        <div id="playerCareerStats" style="margin-top:12px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
   <div class="app-layout">
 
     <!-- SIDEBAR -->
@@ -1021,45 +1305,13 @@
         <div class="search-results" id="searchResults"></div>
       </div>
 
-      <!-- TODAY'S THREATS -->
+      <!-- MLB -->
       <div class="sidebar-section">
-        <div class="sidebar-section-title">⚡ Today's Threats</div>
-        <div class="threat-summary-grid">
-          <div class="threat-summary-card">
-            <div class="threat-summary-count" id="sidebarTripleCount" style="color:var(--accent-gold);">—</div>
-            <div class="threat-summary-label">HR TRIPLE</div>
-          </div>
-          <div class="threat-summary-card">
-            <div class="threat-summary-count" id="sidebarDoubleCount" style="color:var(--accent-orange);">—</div>
-            <div class="threat-summary-label">HR DOUBLE</div>
-          </div>
-          <div class="threat-summary-card">
-            <div class="threat-summary-count" id="sidebarNoHRTripleCount" style="color:#df00ff;">—</div>
-            <div class="threat-summary-label">NO HR ⚡</div>
-          </div>
-          <div class="threat-summary-card">
-            <div class="threat-summary-count" id="sidebarNoHRDoubleCount" style="color:#c77dff;">—</div>
-            <div class="threat-summary-label">NO HR 🛡️</div>
-          </div>
+        <div class="sidebar-mlb-btn" onclick="openMLBModal()">
+          <span class="sidebar-mlb-icon">⚾</span>
+          <span class="sidebar-mlb-label">MLB</span>
+          <span class="sidebar-mlb-arrow">›</span>
         </div>
-      </div>
-
-      <!-- HR SCORE RANKINGS -->
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">📊 HR Score Rankings</div>
-        <div id="sidebarScoreRankings"><div class="hr-feed-empty">Loading...</div></div>
-      </div>
-
-      <!-- LIVE HR FEED -->
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">🔴 Live HR Feed</div>
-        <div id="sidebarHRFeed"><div class="hr-feed-empty">No HRs yet today</div></div>
-      </div>
-
-      <!-- TEAM ROSTERS -->
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">📋 Team Rosters</div>
-        <div id="sidebarRosters"><div class="hr-feed-empty">Loading teams...</div></div>
       </div>
 
     </aside>
@@ -2506,6 +2758,301 @@ function switchTopNav(tab, btn) {
     const dstK = document.getElementById('ko-body-v2');
     if (srcK && dstK && !dstK.children.length) dstK.innerHTML = srcK.innerHTML;
   }
+}
+
+// ── ROSTER SEARCH ─────────────────────────────────────────────────────
+function filterRoster(val) {
+  const q = val.toLowerCase().trim();
+  const rows = document.querySelectorAll('#teamModalRoster tbody tr:not(.roster-div-row)');
+  const divRows = document.querySelectorAll('#teamModalRoster tbody tr.roster-div-row');
+
+  rows.forEach(row => {
+    const name = row.querySelector('.roster-name')?.textContent?.toLowerCase() || '';
+    const pos  = row.querySelector('.roster-pos')?.textContent?.toLowerCase() || '';
+    row.style.display = (!q || name.includes(q) || pos.includes(q)) ? '' : 'none';
+  });
+
+  // Hide division headers if all their players are hidden
+  divRows.forEach(divRow => {
+    let next = divRow.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('roster-div-row')) {
+      if (next.style.display !== 'none') { hasVisible = true; break; }
+      next = next.nextElementSibling;
+    }
+    divRow.style.display = hasVisible ? '' : 'none';
+  });
+}
+
+// ── PLAYER MODAL ──────────────────────────────────────────────────────
+const playerModalCache = {};
+
+function closePlayerModal(e) {
+  if (e && e.target !== document.getElementById('playerModalOverlay')) return;
+  document.getElementById('playerModalOverlay').classList.remove('open');
+}
+
+async function openPlayerModal(playerId, name, teamAbbr) {
+  if (!playerId) return;
+  const tc = tickerTeamColor(teamAbbr||'');
+
+  // Show modal immediately
+  document.getElementById('playerModalName').textContent = name;
+  document.getElementById('playerModalMeta').textContent = '—';
+  document.getElementById('playerModalHeader').style.borderBottom = `2px solid ${tc}`;
+  ['plAge','plHeight','plWeight','plBorn'].forEach(id => {
+    document.getElementById(id).textContent = id === 'plAge' ? '🎂 —' : id === 'plHeight' ? '📏 —' : id === 'plWeight' ? '⚖️ —' : '📍 —';
+  });
+  document.getElementById('playerSeasonStats').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading stats...</div>`;
+  document.getElementById('playerCareerStats').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading...</div>`;
+  document.getElementById('playerModalOverlay').classList.add('open');
+
+  if (playerModalCache[playerId]) {
+    renderPlayerModal(playerModalCache[playerId], tc);
+    return;
+  }
+
+  try {
+    const [bioData, seasonHit, seasonPit, careerHit, careerPit] = await Promise.all([
+      fetchJSON(`${BASE}/people/${playerId}`).catch(()=>null),
+      fetchJSON(`${BASE}/people/${playerId}/stats?stats=season&season=${SEASON}&group=hitting`).catch(()=>null),
+      fetchJSON(`${BASE}/people/${playerId}/stats?stats=season&season=${SEASON}&group=pitching`).catch(()=>null),
+      fetchJSON(`${BASE}/people/${playerId}/stats?stats=career&group=hitting`).catch(()=>null),
+      fetchJSON(`${BASE}/people/${playerId}/stats?stats=career&group=pitching`).catch(()=>null),
+    ]);
+    const data = { bioData, seasonHit, seasonPit, careerHit, careerPit };
+    playerModalCache[playerId] = data;
+    renderPlayerModal(data, tc);
+  } catch(e) {
+    console.warn('Player modal fetch failed:', e);
+    document.getElementById('playerModalMeta').textContent = 'Failed to load player data';
+  }
+}
+
+function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit }, tc) {
+  const person = bioData?.people?.[0];
+  if (!person) return;
+
+  // Headshot
+  const headshotUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${person.id}/headshot/67/current`;
+  const img = document.getElementById('playerHeadshot');
+  const fallback = document.getElementById('playerHeadshotFallback');
+  img.style.display = 'block';
+  fallback.style.display = 'none';
+  img.src = headshotUrl;
+  // Apply team color border to headshot
+  document.querySelector('.player-headshot-wrap').style.borderColor = tc;
+
+  // Bio
+  document.getElementById('playerModalName').textContent = person.fullName || '—';
+  const pos  = person.primaryPosition?.abbreviation || '—';
+  const team = person.currentTeam?.name || '—';
+  const hand = `Bats: ${person.batSide?.code||'—'} · Throws: ${person.pitchHand?.code||'—'}`;
+  document.getElementById('playerModalMeta').textContent = `${pos} · ${team} · ${hand}`;
+
+  // Quick stats
+  document.getElementById('plAge').textContent    = `🎂 Age ${person.currentAge||'—'}`;
+  document.getElementById('plHeight').textContent = `📏 ${person.height||'—'}`;
+  document.getElementById('plWeight').textContent = `⚖️ ${person.weight ? person.weight+'lbs' : '—'}`;
+  document.getElementById('plBorn').textContent   = `📍 ${person.birthCity||'—'}`;
+
+  // Helper to build stat grid
+  function statGrid(stats, isHitter) {
+    if (!stats?.length) return `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:8px 0;">No data available</div>`;
+    const s = stats[0].stat;
+    const cards = isHitter ? [
+      {label:'AVG', val: s.avg||'.000'},
+      {label:'HR',  val: s.homeRuns??'0', color: tc},
+      {label:'RBI', val: s.rbi??'0'},
+      {label:'OBP', val: s.obp||'.000'},
+      {label:'SLG', val: s.slg||'.000'},
+      {label:'OPS', val: s.ops||'.000'},
+      {label:'H',   val: s.hits??'0'},
+      {label:'AB',  val: s.atBats??'0'},
+    ] : [
+      {label:'ERA',  val: s.era||'0.00'},
+      {label:'W',    val: s.wins??'0', color:'var(--accent-green)'},
+      {label:'L',    val: s.losses??'0', color:'var(--accent-red)'},
+      {label:'K',    val: s.strikeOuts??'0', color:'var(--accent-purple)'},
+      {label:'IP',   val: s.inningsPitched||'0'},
+      {label:'WHIP', val: s.whip||'0.00'},
+      {label:'HR',   val: s.homeRuns??'0', color:tc},
+      {label:'BB',   val: s.baseOnBalls??'0'},
+    ];
+    return `<div class="player-stats-grid">${cards.map(c=>`
+      <div class="player-stat-card">
+        <div class="ps-label">${c.label}</div>
+        <div class="ps-val" style="${c.color?'color:'+c.color:''}">${c.val}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  const isPitcher = pos === 'P' || pos === 'SP' || pos === 'RP' || pos === 'CP';
+  const seasonStats  = isPitcher ? seasonPit?.stats?.[0]?.splits  : seasonHit?.stats?.[0]?.splits;
+  const careerStats  = isPitcher ? careerPit?.stats?.[0]?.splits  : careerHit?.stats?.[0]?.splits;
+
+  document.getElementById('playerSeasonStats').innerHTML = statGrid(seasonStats, !isPitcher);
+  document.getElementById('playerCareerStats').innerHTML = statGrid(careerStats, !isPitcher);
+}
+
+// ── MLB MODAL ─────────────────────────────────────────────────────────
+function openMLBModal() {
+  document.getElementById('mlbModalOverlay').classList.add('open');
+}
+function closeMLBModal(e) {
+  if (e && e.target !== document.getElementById('mlbModalOverlay')) return;
+  document.getElementById('mlbModalOverlay').classList.remove('open');
+}
+function closeTeamModal(e) {
+  if (e && e.target !== document.getElementById('teamModalOverlay')) return;
+  document.getElementById('teamModalOverlay').classList.remove('open');
+}
+
+// Team ID lookup
+const TEAM_ID_MAP = {
+  'ARI':109,'ATL':144,'BAL':110,'BOS':111,'CHC':112,'CWS':145,'CIN':113,
+  'CLE':114,'COL':115,'DET':116,'HOU':117,'KC':118,'LAA':108,'LAD':119,
+  'MIA':146,'MIL':158,'MIN':142,'NYM':121,'NYY':147,'ATH':133,'PHI':143,
+  'PIT':134,'SD':135,'SF':137,'SEA':136,'STL':138,'TB':139,'TEX':140,
+  'TOR':141,'WSH':120
+};
+
+// Venue ID lookup (for dimensions)
+const VENUE_ID_MAP = {
+  'ARI':15,'ATL':4705,'BAL':2,'BOS':3,'CHC':17,'CWS':4,'CIN':2602,
+  'CLE':5,'COL':19,'DET':2394,'HOU':2392,'KC':7,'LAA':1,'LAD':22,
+  'MIA':4169,'MIL':32,'MIN':3312,'NYM':3289,'NYY':3313,'ATH':10,'PHI':2681,
+  'PIT':31,'SD':2680,'SF':2395,'SEA':680,'STL':2889,'TB':12,'TEX':5325,
+  'TOR':14,'WSH':3309
+};
+
+const teamModalCache = {};
+// Clear cache on load so fullRoster type is used fresh
+
+
+async function openTeamModal(abbr, name) {
+  // Show modal immediately with loading state
+  document.getElementById('teamModalTitle').textContent = '⚾ ' + name;
+
+  // Apply team color to header
+  const tc = tickerTeamColor(abbr);
+  document.getElementById('teamModalHeader').style.borderBottom = `2px solid ${tc}`;
+
+  // Reset fields
+  ['tmVenue','tmSurface','tmRoof','tmCapacity'].forEach(id => {
+    document.getElementById(id).textContent = id === 'tmVenue' ? '🏟️ Loading...' :
+      id === 'tmSurface' ? '🌿 —' : id === 'tmRoof' ? '☁️ —' : '👥 —';
+  });
+  ['dimLF','dimLC','dimCF','dimRC','dimRF','dimHR'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+  document.getElementById('dimHRCard').style.display = 'none';
+  document.getElementById('rosterSearch').value = '';
+  document.getElementById('teamModalRoster').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:20px 0;text-align:center;">Loading roster...</div>`;
+  document.getElementById('teamModalOverlay').classList.add('open');
+
+  // Use cache if available
+  if (teamModalCache[abbr]) {
+    renderTeamModal(abbr, teamModalCache[abbr]);
+    return;
+  }
+
+  try {
+    const teamId  = TEAM_ID_MAP[abbr];
+    const venueId = VENUE_ID_MAP[abbr];
+
+    // Fetch venue info + roster in parallel
+    // Use 40Man roster to capture two-way players like Ohtani who may be missed by active roster
+    const [venueData, rosterData] = await Promise.all([
+      venueId ? fetchJSON(`${BASE}/venues/${venueId}?hydrate=fieldInfo,location`).catch(()=>null) : null,
+      teamId  ? fetchJSON(`${BASE}/teams/${teamId}/roster?rosterType=fullRoster&season=${SEASON}&hydrate=person`).catch(()=>({roster:[]})) : {roster:[]}
+    ]);
+
+    const data = { venueData, rosterData };
+    teamModalCache[abbr] = data;
+    renderTeamModal(abbr, data);
+
+  } catch(e) {
+    console.warn('Team modal fetch failed:', e);
+    document.getElementById('tmVenue').textContent = '🏟️ Data unavailable';
+  }
+}
+
+function renderTeamModal(abbr, { venueData, rosterData }) {
+  const tc = tickerTeamColor(abbr);
+  const venue = venueData?.venues?.[0];
+
+  // Venue info
+  if (venue) {
+    document.getElementById('tmVenue').textContent = '🏟️ ' + (venue.name || '—');
+    const fi = venue.fieldInfo;
+    if (fi) {
+      document.getElementById('tmSurface').textContent  = '🌿 ' + (fi.turfType || 'Grass');
+      document.getElementById('tmRoof').textContent     = '☁️ ' + (fi.roofType || 'Open');
+      document.getElementById('tmCapacity').textContent = '👥 ' + (venue.location?.capacity ? venue.location.capacity.toLocaleString() : '—');
+      // Dimensions
+      if (fi.leftLine)   { document.getElementById('dimLF').textContent = fi.leftLine + ' ft'; }
+      if (fi.leftCenter) { document.getElementById('dimLC').textContent = fi.leftCenter + ' ft'; }
+      if (fi.center)     { document.getElementById('dimCF').textContent = fi.center + ' ft'; }
+      if (fi.rightCenter){ document.getElementById('dimRC').textContent = fi.rightCenter + ' ft'; }
+      if (fi.rightLine)  { document.getElementById('dimRF').textContent = fi.rightLine + ' ft'; }
+    }
+  }
+
+  // HR total from venues array
+  const venueEntry = venues.find(v => v.venueId === VENUE_ID_MAP[abbr]);
+  if (venueEntry) {
+    document.getElementById('dimHR').textContent = venueEntry.hr + ' HR';
+    document.getElementById('dimHRCard').style.display = 'block';
+  }
+
+  // Roster — sort by position
+  const posOrder = {TWP:-1,P:0,C:1,'1B':2,'2B':3,'3B':4,SS:5,LF:6,CF:7,RF:8,OF:9,DH:10};
+  const roster = (rosterData?.roster || []).sort((a,b) =>
+    (posOrder[a.position?.abbreviation]??99) - (posOrder[b.position?.abbreviation]??99)
+  );
+
+  if (!roster.length) {
+    document.getElementById('teamModalRoster').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:20px 0;text-align:center;">No roster data available</div>`;
+    return;
+  }
+
+  // Group by position category — TWP (Two-Way Players) get their own section
+  const twoWay  = roster.filter(p => p.position?.abbreviation === 'TWP');
+  const pitchers = roster.filter(p => p.position?.abbreviation === 'P');
+  const catchers = roster.filter(p => p.position?.abbreviation === 'C');
+  const infield  = roster.filter(p => ['1B','2B','3B','SS'].includes(p.position?.abbreviation));
+  const outfield = roster.filter(p => ['LF','CF','RF','OF'].includes(p.position?.abbreviation));
+  const dh       = roster.filter(p => p.position?.abbreviation === 'DH');
+
+  function playerRows(players) {
+    return players.map(p => `
+      <tr onclick="openPlayerModal(${p.person?.id},'${(p.person?.fullName||'').replace(/'/g,"\\'")}','${abbr}')" style="cursor:pointer;">
+        <td class="roster-pos" style="color:${tc};">${p.position?.abbreviation||'—'}</td>
+        <td class="roster-name">${p.person?.fullName||'—'}</td>
+        <td class="roster-bats">${p.person?.batSide?.code||'—'} / ${p.person?.pitchHand?.code||'—'}</td>
+        <td class="roster-num">#${p.jerseyNumber||'—'}</td>
+      </tr>`).join('');
+  }
+
+  function groupSection(label, players) {
+    if (!players.length) return '';
+    return `<tr class="roster-div-row"><td colspan="4">${label}</td></tr>${playerRows(players)}`;
+  }
+
+  document.getElementById('teamModalRoster').innerHTML = `
+    <table class="roster-table">
+      <thead><tr>
+        <th>POS</th><th>Player</th><th>B/T</th><th style="text-align:right;">#</th>
+      </tr></thead>
+      <tbody>
+        ${groupSection('Two-Way Players ⭐', twoWay)}
+        ${groupSection('Pitchers', pitchers)}
+        ${groupSection('Catchers', catchers)}
+        ${groupSection('Infield', infield)}
+        ${groupSection('Outfield', outfield)}
+        ${groupSection('DH', dh)}
+      </tbody>
+    </table>`;
 }
 
 function toggleSidebar() {
