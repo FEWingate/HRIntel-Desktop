@@ -780,7 +780,26 @@
   .dim-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
   .dim-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--text); }
 
-  /* Roster table inside team modal */
+  /* ── ROSTER ACCORDION ── */
+  .roster-accordion { display: flex; flex-direction: column; gap: 6px; }
+  .accordion-section { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .accordion-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; cursor: pointer; background: var(--surface2);
+    transition: background 0.15s; user-select: none;
+  }
+  .accordion-header:hover { background: var(--border2); }
+  .accordion-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+  }
+  .accordion-meta { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); display: flex; align-items: center; gap: 10px; }
+  .accordion-arrow { font-size: 14px; transition: transform 0.25s; color: var(--text-dim); }
+  .accordion-arrow.open { transform: rotate(180deg); }
+  .accordion-body { display: none; }
+  .accordion-body.open { display: block; }
+
+  /* Roster table inside accordion */
   .roster-table { width: 100%; border-collapse: collapse; }
   .roster-table thead th {
     font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px;
@@ -814,6 +833,92 @@
   .sidebar-mlb-btn:hover .sidebar-mlb-arrow { transform: translateX(3px); color: var(--accent-blue); }
 
   /* ── MLB MODAL ── */
+  /* ── SCHEDULE MODAL ── */
+  .sched-nav-btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 18px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); border-radius: 6px; width: 32px; height: 32px;
+    cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+  }
+  .sched-nav-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+  .sched-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .sched-today-btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text-mid); border-radius: 6px; padding: 4px 10px;
+    cursor: pointer; transition: all 0.15s; text-transform: uppercase;
+  }
+  .sched-today-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+  /* Schedule game cards */
+  .sched-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .sched-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color 0.15s;
+  }
+  .sched-card:hover { border-color: var(--border2); }
+  .sched-card.sched-final { border-left: 3px solid var(--accent-red); }
+  .sched-card.sched-live  { border-left: 3px solid var(--accent-green); }
+  .sched-card.sched-sched { border-left: 3px solid var(--border2); }
+  .sched-card-header {
+    padding: 8px 12px; background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sched-status { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; }
+  .sched-status.final { color: var(--accent-red); }
+  .sched-status.live  { color: var(--accent-green); }
+  .sched-status.sched { color: var(--text-dim); }
+  .sched-venue { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .sched-card-body { padding: 10px 12px; }
+  .sched-team-row {
+    display: grid; grid-template-columns: 1fr auto auto auto;
+    align-items: center; gap: 8px; padding: 4px 0;
+  }
+  .sched-team-row:first-of-type { border-bottom: 1px solid rgba(26,31,46,0.5); padding-bottom: 6px; margin-bottom: 2px; }
+  .sched-team-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .sched-team-abbr-sm { font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700; }
+  .sched-score { font-family: 'Bebas Neue', sans-serif; font-size: 22px; min-width: 24px; text-align: center; }
+  .sched-score.winner { color: var(--text); }
+  .sched-score.loser  { color: var(--text-dim); }
+  .sched-rhe { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); min-width: 40px; text-align: right; }
+  .sched-pitchers { padding: 6px 12px 10px; border-top: 1px solid var(--border); display: flex; gap: 12px; flex-wrap: wrap; }
+  .sched-pitcher { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .sched-pitcher span { color: var(--text-mid); }
+  .mlb-tab-btn {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+    padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border2);
+    background: transparent; color: var(--text-mid); cursor: pointer; transition: all 0.15s;
+  }
+  .mlb-tab-btn:hover { background: var(--surface2); color: var(--text); }
+  .mlb-tab-btn.active { background: var(--surface2); color: var(--text); border-color: var(--accent-blue); }
+
+  /* Standings table */
+  .standings-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .standings-table th {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px;
+    color: var(--text-dim); text-transform: uppercase; padding: 6px 8px;
+    text-align: left; border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02); white-space: nowrap;
+  }
+  .standings-table th.right { text-align: right; }
+  .standings-table td { padding: 7px 8px; border-bottom: 1px solid rgba(26,31,46,0.6); white-space: nowrap; }
+  .standings-table tr:last-child td { border-bottom: none; }
+  .standings-table tr:hover td { background: var(--surface2); cursor: pointer; }
+  .standings-div-header td {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 3px;
+    color: var(--text-dim); text-transform: uppercase; padding: 10px 8px 4px;
+    background: rgba(255,255,255,0.01); border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .standings-abbr {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 1px 5px; border-radius: 3px; border: 1px solid;
+    min-width: 34px; text-align: center; display: inline-block;
+  }
+  .standings-val { font-family: 'IBM Plex Mono', monospace; text-align: right; color: var(--text-mid); white-space: nowrap; }
+  .standings-val.bold { color: var(--text); font-weight: 600; }
+
   .mlb-modal-overlay {
     position: fixed; inset: 0; z-index: 500;
     background: rgba(5,6,18,0.85); backdrop-filter: blur(8px);
@@ -1138,11 +1243,25 @@
 
   <!-- MLB MODAL -->
   <div class="mlb-modal-overlay" id="mlbModalOverlay" onclick="closeMLBModal(event)">
-    <div class="mlb-modal" id="mlbModal">
+    <div class="mlb-modal" id="mlbModal" style="max-width:1100px;">
       <div class="mlb-modal-header">
-        <div class="mlb-modal-title">⚾ MLB Teams</div>
+        <div class="mlb-modal-title">⚾ MLB</div>
+        <div style="display:flex;gap:4px;">
+          <button class="mlb-tab-btn active" id="mlbTabStandings" onclick="switchMLBTab('standings')">Standings</button>
+          <button class="mlb-tab-btn" id="mlbTabTeams" onclick="switchMLBTab('teams')">Teams</button>
+        </div>
         <button class="mlb-modal-close" onclick="closeMLBModal()">✕</button>
       </div>
+
+      <!-- STANDINGS TAB -->
+      <div id="mlbPanelStandings" class="mlb-tab-panel">
+        <div class="mlb-modal-body" id="standingsBody">
+          <div style="padding:40px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);">Loading standings...</div>
+        </div>
+      </div>
+
+      <!-- TEAMS TAB -->
+      <div id="mlbPanelTeams" class="mlb-tab-panel" style="display:none;">
       <div class="mlb-modal-body">
 
         <!-- AMERICAN LEAGUE -->
@@ -1204,6 +1323,8 @@
         </div>
 
       </div>
+      </div><!-- end teams panel -->
+
     </div>
   </div>
 
@@ -1233,6 +1354,14 @@
           <div class="dim-card"><div class="dim-label">RC</div><div class="dim-val" id="dimRC">—</div></div>
           <div class="dim-card"><div class="dim-label">RF</div><div class="dim-val" id="dimRF">—</div></div>
           <div class="dim-card" id="dimHRCard" style="display:none;"><div class="dim-label">HR 2026</div><div class="dim-val" style="color:var(--accent-gold);" id="dimHR">—</div></div>
+        </div>
+      </div>
+
+      <!-- TEAM SEASON STATS -->
+      <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
+        <div class="team-section-label">📊 2026 Team Season Stats</div>
+        <div id="teamSeasonStats" style="margin-top:10px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px 0;">Loading stats...</div>
         </div>
       </div>
 
@@ -1293,6 +1422,24 @@
 
     </div>
   </div>
+  <!-- SCHEDULE MODAL -->
+  <div class="mlb-modal-overlay" id="scheduleModalOverlay" onclick="closeScheduleModal(event)">
+    <div class="mlb-modal" id="scheduleModal" style="max-width:1000px;">
+      <div class="mlb-modal-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="sched-nav-btn" onclick="navigateSchedule(-1)">‹</button>
+          <div class="mlb-modal-title" id="scheduleModalDate" style="font-size:18px;min-width:200px;text-align:center;">—</div>
+          <button class="sched-nav-btn" onclick="navigateSchedule(1)" id="schedNavNext">›</button>
+          <button class="sched-today-btn" onclick="navigateScheduleToToday()">Today</button>
+        </div>
+        <button class="mlb-modal-close" onclick="closeScheduleModal()">✕</button>
+      </div>
+      <div id="scheduleGamesBody" style="padding:16px 20px;max-height:78vh;overflow-y:auto;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:40px 0;">Loading games...</div>
+      </div>
+    </div>
+  </div>
+
   <div class="app-layout">
 
     <!-- SIDEBAR -->
@@ -1310,6 +1457,15 @@
         <div class="sidebar-mlb-btn" onclick="openMLBModal()">
           <span class="sidebar-mlb-icon">⚾</span>
           <span class="sidebar-mlb-label">MLB</span>
+          <span class="sidebar-mlb-arrow">›</span>
+        </div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div class="sidebar-section">
+        <div class="sidebar-mlb-btn" onclick="openScheduleModal()">
+          <span class="sidebar-mlb-icon">📅</span>
+          <span class="sidebar-mlb-label">Schedule</span>
           <span class="sidebar-mlb-arrow">›</span>
         </div>
       </div>
@@ -2607,6 +2763,9 @@ async function initDashboard() {
   renderHRTicker();
   fetchTickerHRData().then(()=>{ renderHRTicker(); updateSidebarHRFeed(); }).catch(()=>{});
 
+  // Pre-load ALL 30 team rosters in background so search works for every player
+  prefetchAllRosters();
+
   } catch(e) {
     // Safety net — if anything crashes, still hide the loading screen
     console.error('initDashboard error:', e);
@@ -2760,27 +2919,34 @@ function switchTopNav(tab, btn) {
   }
 }
 
+// ── ROSTER ACCORDION ──────────────────────────────────────────────────
+function toggleAccordion(id) {
+  const body  = document.getElementById(id);
+  const arrow = document.getElementById('arrow-' + id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  arrow.classList.toggle('open', !isOpen);
+}
+
 // ── ROSTER SEARCH ─────────────────────────────────────────────────────
 function filterRoster(val) {
   const q = val.toLowerCase().trim();
-  const rows = document.querySelectorAll('#teamModalRoster tbody tr:not(.roster-div-row)');
-  const divRows = document.querySelectorAll('#teamModalRoster tbody tr.roster-div-row');
-
-  rows.forEach(row => {
+  // Filter player rows in all accordion sections
+  document.querySelectorAll('#teamModalRoster .roster-table tbody tr').forEach(row => {
     const name = row.querySelector('.roster-name')?.textContent?.toLowerCase() || '';
     const pos  = row.querySelector('.roster-pos')?.textContent?.toLowerCase() || '';
     row.style.display = (!q || name.includes(q) || pos.includes(q)) ? '' : 'none';
   });
-
-  // Hide division headers if all their players are hidden
-  divRows.forEach(divRow => {
-    let next = divRow.nextElementSibling;
-    let hasVisible = false;
-    while (next && !next.classList.contains('roster-div-row')) {
-      if (next.style.display !== 'none') { hasVisible = true; break; }
-      next = next.nextElementSibling;
+  // Auto-expand sections that have matching players, collapse empty ones
+  document.querySelectorAll('#teamModalRoster .accordion-section').forEach(section => {
+    const body  = section.querySelector('.accordion-body');
+    const arrow = section.querySelector('.accordion-arrow');
+    const visibleRows = [...section.querySelectorAll('tbody tr')].filter(r => r.style.display !== 'none');
+    if (q) {
+      const hasMatches = visibleRows.length > 0;
+      body.classList.toggle('open', hasMatches);
+      arrow.classList.toggle('open', hasMatches);
     }
-    divRow.style.display = hasVisible ? '' : 'none';
   });
 }
 
@@ -2894,9 +3060,300 @@ function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit
   document.getElementById('playerCareerStats').innerHTML = statGrid(careerStats, !isPitcher);
 }
 
-// ── MLB MODAL ─────────────────────────────────────────────────────────
+// ── SCHEDULE MODAL ────────────────────────────────────────────────────
+let scheduleCurrentDate = new Date();
+const scheduleCache = {};
+
+function openScheduleModal() {
+  scheduleCurrentDate = new Date(); // start on today
+  document.getElementById('scheduleModalOverlay').classList.add('open');
+  loadScheduleForDate(scheduleCurrentDate);
+}
+
+function closeScheduleModal(e) {
+  if (e && e.target !== document.getElementById('scheduleModalOverlay')) return;
+  document.getElementById('scheduleModalOverlay').classList.remove('open');
+}
+
+function navigateSchedule(dir) {
+  const d = new Date(scheduleCurrentDate);
+  d.setDate(d.getDate() + dir);
+  // Don't allow going past today
+  const today = new Date(); today.setHours(23,59,59,999);
+  if (d > today) return;
+  scheduleCurrentDate = d;
+  loadScheduleForDate(d);
+}
+
+function navigateScheduleToToday() {
+  scheduleCurrentDate = new Date();
+  loadScheduleForDate(scheduleCurrentDate);
+}
+
+function formatScheduleDate(d) {
+  return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+}
+
+function dateKey(d) {
+  return d.toISOString().slice(0,10);
+}
+
+async function loadScheduleForDate(d) {
+  const key = dateKey(d);
+  const el = document.getElementById('scheduleGamesBody');
+  const today = new Date(); today.setHours(23,59,59,999);
+  const isToday = dateKey(d) === dateKey(new Date());
+  const isFuture = d > today;
+
+  // Update header
+  document.getElementById('scheduleModalDate').textContent = formatScheduleDate(d);
+
+  // Disable next arrow if today
+  const nextBtn = document.getElementById('schedNavNext');
+  if (nextBtn) nextBtn.disabled = isToday;
+
+  if (scheduleCache[key]) { renderScheduleGames(scheduleCache[key], isToday); return; }
+
+  el.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:40px 0;">Loading games...</div>`;
+
+  try {
+    const dateStr = key;
+    const data = await fetchJSON(`${BASE}/schedule?sportId=1&date=${dateStr}&hydrate=linescore,boxscore,probablePitcher,decisions`);
+    scheduleCache[key] = data;
+    renderScheduleGames(data, isToday);
+  } catch(e) {
+    el.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:40px 0;">Could not load games for this date.</div>`;
+  }
+}
+
+function renderScheduleGames(data, isToday) {
+  const el = document.getElementById('scheduleGamesBody');
+  const games = data?.dates?.[0]?.games || [];
+
+  if (!games.length) {
+    el.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:40px 0;">No games scheduled for this date.</div>`;
+    return;
+  }
+
+  const cards = games.map(g => {
+    const status    = g.status?.detailedState || '';
+    const isFinal   = status.includes('Final') || status.includes('Completed');
+    const isLive    = g.status?.abstractGameState === 'Live';
+    const isScheduled = !isFinal && !isLive;
+
+    const away = g.teams?.away;
+    const home = g.teams?.home;
+    const awayName  = away?.team?.teamName || away?.team?.name || '—';
+    const homeName  = home?.team?.teamName || home?.team?.name || '—';
+    const awayAbbr  = away?.team?.abbreviation || '—';
+    const homeAbbr  = home?.team?.abbreviation || '—';
+    const awayScore = away?.score ?? (isScheduled ? '' : '0');
+    const homeScore = home?.score ?? (isScheduled ? '' : '0');
+    const awayWon   = isFinal && awayScore > homeScore;
+    const homeWon   = isFinal && homeScore > awayScore;
+
+    // R H E
+    const awayLine  = g.linescore?.teams?.away;
+    const homeLine  = g.linescore?.teams?.home;
+    const awayRHE   = isFinal ? `${awayLine?.runs??''}  ${awayLine?.hits??''}  ${awayLine?.errors??''}` : '';
+    const homeRHE   = isFinal ? `${homeLine?.runs??''}  ${homeLine?.hits??''}  ${homeLine?.errors??''}` : '';
+
+    // Pitchers
+    const wp = g.decisions?.winner;
+    const lp = g.decisions?.loser;
+    const sv = g.decisions?.save;
+    const wpLine = wp ? `W: ${wp.fullName}` : '';
+    const lpLine = lp ? `L: ${lp.fullName}` : '';
+    const svLine = sv ? `S: ${sv.fullName}` : '';
+
+    // Time for scheduled games
+    const gameTime = isScheduled ? (g.gameDate ? new Date(g.gameDate).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZoneName:'short'}) : '—') : '';
+
+    const tc_away = tickerTeamColor(awayAbbr);
+    const tc_home = tickerTeamColor(homeAbbr);
+
+    const statusClass = isFinal ? 'final' : isLive ? 'live' : 'sched';
+    const statusText  = isFinal ? 'FINAL' : isLive ? `● LIVE · ${g.linescore?.currentInningOrdinal||''}` : gameTime;
+
+    const cardClass = isFinal ? 'sched-final' : isLive ? 'sched-live' : 'sched-sched';
+
+    return `<div class="sched-card ${cardClass}" onclick="openScheduleGame(${g.gamePk})">
+      <div class="sched-card-header">
+        <span class="sched-status ${statusClass}">${statusText}</span>
+        <span class="sched-venue">${g.venue?.name||''}</span>
+      </div>
+      <div class="sched-card-body">
+        <div class="sched-team-row">
+          <span class="sched-team-name">${awayName}
+            <span class="sched-team-abbr-sm" style="color:${tc_away};"> ${awayAbbr}</span>
+          </span>
+          ${isFinal ? `<span class="sched-rhe" style="font-size:8px;color:var(--text-dim);">R&nbsp;&nbsp;H&nbsp;&nbsp;E</span>` : ''}
+          ${isFinal ? `<span class="sched-rhe">${awayRHE}</span>` : ''}
+          <span class="sched-score ${awayWon?'winner':'loser'}">${awayScore}</span>
+        </div>
+        <div class="sched-team-row">
+          <span class="sched-team-name">${homeName}
+            <span class="sched-team-abbr-sm" style="color:${tc_home};"> ${homeAbbr}</span>
+          </span>
+          ${isFinal ? `<span class="sched-rhe" style="font-size:8px;color:var(--text-dim);">R&nbsp;&nbsp;H&nbsp;&nbsp;E</span>` : ''}
+          ${isFinal ? `<span class="sched-rhe">${homeRHE}</span>` : ''}
+          <span class="sched-score ${homeWon?'winner':'loser'}">${homeScore}</span>
+        </div>
+      </div>
+      ${(wpLine||lpLine) ? `<div class="sched-pitchers">
+        ${wpLine ? `<span class="sched-pitcher"><span>${wpLine}</span></span>` : ''}
+        ${lpLine ? `<span class="sched-pitcher"><span>${lpLine}</span></span>` : ''}
+        ${svLine ? `<span class="sched-pitcher"><span>${svLine}</span></span>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="sched-grid">${cards}</div>`;
+}
+let standingsCache = null; // cleared on each session load
+
+function switchMLBTab(tab) {
+  document.querySelectorAll('.mlb-tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mlbTabStandings').classList.toggle('active', tab === 'standings');
+  document.getElementById('mlbTabTeams').classList.toggle('active', tab === 'teams');
+  document.getElementById('mlbPanelStandings').style.display = tab === 'standings' ? 'block' : 'none';
+  document.getElementById('mlbPanelTeams').style.display     = tab === 'teams'     ? 'block' : 'none';
+  if (tab === 'standings') loadStandings();
+}
+
+async function loadStandings() {
+  const el = document.getElementById('standingsBody');
+  if (standingsCache) { renderStandings(standingsCache); return; }
+  el.innerHTML = `<div style="padding:40px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);">Loading standings...</div>`;
+  try {
+    const data = await fetchJSON(`${BASE}/standings?leagueId=103,104&season=${SEASON}&hydrate=team,division`);
+    standingsCache = data;
+    renderStandings(data);
+  } catch(e) {
+    el.innerHTML = `<div style="padding:40px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);">Could not load standings</div>`;
+  }
+}
+
+// Map team ID → abbr for standings
+const STANDINGS_ABBR = {
+  109:'ARI',144:'ATL',110:'BAL',111:'BOS',112:'CHC',145:'CWS',113:'CIN',114:'CLE',
+  115:'COL',116:'DET',117:'HOU',118:'KC',108:'LAA',119:'LAD',146:'MIA',158:'MIL',
+  142:'MIN',121:'NYM',147:'NYY',133:'ATH',143:'PHI',134:'PIT',135:'SD',137:'SF',
+  136:'SEA',138:'STL',139:'TB',140:'TEX',141:'TOR',120:'WSH'
+};
+
+function renderStandings(data) {
+  const el = document.getElementById('standingsBody');
+  if (!data?.records?.length) {
+    el.innerHTML = `<div style="padding:40px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);">No standings data yet</div>`;
+    return;
+  }
+
+  // AL division IDs: 200=West, 201=East, 202=Central
+  // NL division IDs: 203=West, 204=East, 205=Central
+  const al = data.records.filter(r => [200,201,202].includes(r.division?.id));
+  const nl = data.records.filter(r => [203,204,205].includes(r.division?.id));
+
+  // Division ID order map — East first, then Central, then West
+  const DIV_ORDER = {
+    201:0, 202:1, 200:2,  // AL East, AL Central, AL West
+    204:3, 205:4, 203:5   // NL East, NL Central, NL West
+  };
+
+  function divisionRows(divRecord) {
+    const divName = divRecord.division?.nameShort || divRecord.division?.name || '—';
+    const rows = (divRecord.teamRecords || []).map((tr, i) => {
+      const abbr = STANDINGS_ABBR[tr.team?.id] || '—';
+      const tc   = tickerTeamColor(abbr);
+      const gb   = tr.gamesBack === '-' ? '—' : (tr.gamesBack || '0');
+      const homeRec = tr.records?.splitRecords?.find(s=>s.type==='home');
+      const awayRec = tr.records?.splitRecords?.find(s=>s.type==='away');
+      const homeStr = homeRec ? `${homeRec.wins}-${homeRec.losses}` : '—';
+      const awayStr = awayRec ? `${awayRec.wins}-${awayRec.losses}` : '—';
+      return `<tr onclick="openTeamModal('${abbr}','${(tr.team?.name||'').replace(/'/g,"\\'")}')">
+        <td style="color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;">${i+1}</td>
+        <td>
+          <span class="standings-abbr" style="color:${tc};border-color:${tc}44;">${abbr}</span>
+        </td>
+        <td class="standings-val bold" style="white-space:nowrap;">${tr.wins}-${tr.losses}</td>
+        <td class="standings-val">${tr.winningPercentage||'—'}</td>
+        <td class="standings-val">${gb}</td>
+        <td class="standings-val">${homeStr}</td>
+        <td class="standings-val">${awayStr}</td>
+        <td class="standings-val">${tr.streak?.streakCode||'—'}</td>
+      </tr>`;
+    }).join('');
+    return `<tr class="standings-div-header"><td colspan="8">${divName}</td></tr>${rows}`;
+  }
+
+  function leagueTable(records, leagueName, color) {
+    const sorted = [...records].sort((a,b) => (DIV_ORDER[a.division?.id]??99) - (DIV_ORDER[b.division?.id]??99));
+    return `
+      <div style="padding:16px 20px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:${color};margin-bottom:12px;">${leagueName}</div>
+        <table class="standings-table">
+          <thead><tr>
+            <th>#</th><th>Team</th>
+            <th class="right">W-L</th><th class="right">PCT</th><th class="right">GB</th>
+            <th class="right">Home</th><th class="right">Away</th><th class="right">Strk</th>
+          </tr></thead>
+          <tbody>${sorted.map(divisionRows).join('')}</tbody>
+        </table>
+      </div>`;
+  }
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--border);">
+      <div style="border-right:1px solid var(--border);">${leagueTable(al, 'American League', 'var(--accent-blue)')}</div>
+      <div>${leagueTable(nl, 'National League', 'var(--accent-red)')}</div>
+    </div>`;
+}
+
+async function openScheduleGame(gamePk) {
+  // If today's game exists in our loaded data, use the full modal
+  const todayGame = todayGames.find(g => g.gamePk === gamePk);
+  if (todayGame) { openGameModal(gamePk); return; }
+
+  // For past/other dates — find from schedule cache and inject temporarily
+  let gameData = null;
+  for (const cached of Object.values(scheduleCache)) {
+    const found = cached?.dates?.[0]?.games?.find(g => g.gamePk === gamePk);
+    if (found) { gameData = found; break; }
+  }
+  if (!gameData) return;
+
+  const tempGame = {
+    gamePk,
+    away: {
+      team: gameData.teams?.away?.team?.teamName || gameData.teams?.away?.team?.name || '—',
+      id: gameData.teams?.away?.team?.id,
+      pitcherName: gameData.decisions?.loser?.fullName || gameData.teams?.away?.probablePitcher?.fullName || '',
+      pitcherId: null, lineup: []
+    },
+    home: {
+      team: gameData.teams?.home?.team?.teamName || gameData.teams?.home?.team?.name || '—',
+      id: gameData.teams?.home?.team?.id,
+      pitcherName: gameData.decisions?.winner?.fullName || gameData.teams?.home?.probablePitcher?.fullName || '',
+      pitcherId: null, lineup: []
+    },
+    venue: gameData.venue?.name || '—',
+    venueId: gameData.venue?.id,
+    time: 'FINAL',
+    isLive: false,
+    isFinal: true,
+    awayScore: gameData.teams?.away?.score ?? 0,
+    homeScore: gameData.teams?.home?.score ?? 0,
+  };
+
+  if (!todayGames.find(g => g.gamePk === gamePk)) todayGames.push(tempGame);
+  openGameModal(gamePk);
+}
+
 function openMLBModal() {
   document.getElementById('mlbModalOverlay').classList.add('open');
+  // Default to standings tab and load
+  switchMLBTab('standings');
 }
 function closeMLBModal(e) {
   if (e && e.target !== document.getElementById('mlbModalOverlay')) return;
@@ -2925,9 +3382,7 @@ const VENUE_ID_MAP = {
   'TOR':14,'WSH':3309
 };
 
-const teamModalCache = {};
-// Clear cache on load so fullRoster type is used fresh
-
+const teamModalCache = {}; // 40Man roster — includes active + IL players
 
 async function openTeamModal(abbr, name) {
   // Show modal immediately with loading state
@@ -2946,6 +3401,7 @@ async function openTeamModal(abbr, name) {
     document.getElementById(id).textContent = '—';
   });
   document.getElementById('dimHRCard').style.display = 'none';
+  document.getElementById('teamSeasonStats').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px 0;">Loading stats...</div>`;
   document.getElementById('rosterSearch').value = '';
   document.getElementById('teamModalRoster').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:20px 0;text-align:center;">Loading roster...</div>`;
   document.getElementById('teamModalOverlay').classList.add('open');
@@ -2960,14 +3416,15 @@ async function openTeamModal(abbr, name) {
     const teamId  = TEAM_ID_MAP[abbr];
     const venueId = VENUE_ID_MAP[abbr];
 
-    // Fetch venue info + roster in parallel
-    // Use 40Man roster to capture two-way players like Ohtani who may be missed by active roster
-    const [venueData, rosterData] = await Promise.all([
+    // Fetch venue info, roster, team stats and standings all in parallel
+    const [venueData, rosterData, teamStatsData, standingsData] = await Promise.all([
       venueId ? fetchJSON(`${BASE}/venues/${venueId}?hydrate=fieldInfo,location`).catch(()=>null) : null,
-      teamId  ? fetchJSON(`${BASE}/teams/${teamId}/roster?rosterType=fullRoster&season=${SEASON}&hydrate=person`).catch(()=>({roster:[]})) : {roster:[]}
+      teamId  ? fetchJSON(`${BASE}/teams/${teamId}/roster?rosterType=40Man&season=${SEASON}&hydrate=person`).catch(()=>({roster:[]})) : {roster:[]},
+      teamId  ? fetchJSON(`${BASE}/teams/${teamId}/stats?stats=season&season=${SEASON}&group=hitting`).catch(()=>null) : null,
+      teamId  ? fetchJSON(`${BASE}/standings?leagueId=103,104&season=${SEASON}&hydrate=team`).catch(()=>null) : null,
     ]);
 
-    const data = { venueData, rosterData };
+    const data = { venueData, rosterData, teamStatsData, standingsData };
     teamModalCache[abbr] = data;
     renderTeamModal(abbr, data);
 
@@ -2977,7 +3434,7 @@ async function openTeamModal(abbr, name) {
   }
 }
 
-function renderTeamModal(abbr, { venueData, rosterData }) {
+function renderTeamModal(abbr, { venueData, rosterData, teamStatsData, standingsData }) {
   const tc = tickerTeamColor(abbr);
   const venue = venueData?.venues?.[0];
 
@@ -2989,7 +3446,6 @@ function renderTeamModal(abbr, { venueData, rosterData }) {
       document.getElementById('tmSurface').textContent  = '🌿 ' + (fi.turfType || 'Grass');
       document.getElementById('tmRoof').textContent     = '☁️ ' + (fi.roofType || 'Open');
       document.getElementById('tmCapacity').textContent = '👥 ' + (venue.location?.capacity ? venue.location.capacity.toLocaleString() : '—');
-      // Dimensions
       if (fi.leftLine)   { document.getElementById('dimLF').textContent = fi.leftLine + ' ft'; }
       if (fi.leftCenter) { document.getElementById('dimLC').textContent = fi.leftCenter + ' ft'; }
       if (fi.center)     { document.getElementById('dimCF').textContent = fi.center + ' ft'; }
@@ -3005,6 +3461,64 @@ function renderTeamModal(abbr, { venueData, rosterData }) {
     document.getElementById('dimHRCard').style.display = 'block';
   }
 
+  // ── TEAM SEASON STATS ──
+  const statsEl = document.getElementById('teamSeasonStats');
+  const teamId  = TEAM_ID_MAP[abbr];
+
+  // Find W-L record from standings
+  let wl = '—', homeRec = '—', awayRec = '—', pct = '—', gb = '—';
+  if (standingsData?.records) {
+    for (const div of standingsData.records) {
+      const found = div.teamRecords?.find(r => r.team?.id === teamId);
+      if (found) {
+        wl      = `${found.wins}-${found.losses}`;
+        pct     = found.winningPercentage || '—';
+        gb      = found.gamesBack === '-' ? '—' : (found.gamesBack || '0');
+        homeRec = found.records?.splitRecords?.find(s=>s.type==='home')  ? `${found.records.splitRecords.find(s=>s.type==='home').wins}-${found.records.splitRecords.find(s=>s.type==='home').losses}` : '—';
+        awayRec = found.records?.splitRecords?.find(s=>s.type==='away')  ? `${found.records.splitRecords.find(s=>s.type==='away').wins}-${found.records.splitRecords.find(s=>s.type==='away').losses}` : '—';
+        break;
+      }
+    }
+  }
+
+  // Team batting stats
+  const splits = teamStatsData?.stats?.[0]?.splits;
+  const s = splits?.length ? splits[0].stat : null;
+
+  function statCard(label, val, color) {
+    return `<div class="dim-card">
+      <div class="dim-label">${label}</div>
+      <div class="dim-val" style="${color?'color:'+color+';font-size:18px;':''}">${val}</div>
+    </div>`;
+  }
+
+  statsEl.innerHTML = `
+    <div style="margin-bottom:10px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px;">Season Record</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${statCard('Overall', wl, tc)}
+        ${statCard('Home', homeRec)}
+        ${statCard('Away', awayRec)}
+        ${statCard('PCT', pct)}
+        ${statCard('GB', gb === '—' ? '—' : (gb === '0' ? '—' : gb))}
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px;">Team Batting</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${statCard('AVG',  s?.avg||'—')}
+        ${statCard('HR',   s?.homeRuns??'—', tc)}
+        ${statCard('HITS', s?.hits??'—')}
+        ${statCard('RBI',  s?.rbi??'—')}
+        ${statCard('OBP',  s?.obp||'—')}
+        ${statCard('SLG',  s?.slg||'—')}
+        ${statCard('OPS',  s?.ops||'—')}
+        ${statCard('SO',   s?.strikeOuts??'—', 'var(--accent-red)')}
+        ${statCard('SB',   s?.stolenBases??'—', 'var(--accent-green)')}
+        ${statCard('R',    s?.runs??'—')}
+      </div>
+    </div>`;
+
   // Roster — sort by position
   const posOrder = {TWP:-1,P:0,C:1,'1B':2,'2B':3,'3B':4,SS:5,LF:6,CF:7,RF:8,OF:9,DH:10};
   const roster = (rosterData?.roster || []).sort((a,b) =>
@@ -3016,7 +3530,7 @@ function renderTeamModal(abbr, { venueData, rosterData }) {
     return;
   }
 
-  // Group by position category — TWP (Two-Way Players) get their own section
+  // Group by position category
   const twoWay  = roster.filter(p => p.position?.abbreviation === 'TWP');
   const pitchers = roster.filter(p => p.position?.abbreviation === 'P');
   const catchers = roster.filter(p => p.position?.abbreviation === 'C');
@@ -3034,25 +3548,40 @@ function renderTeamModal(abbr, { venueData, rosterData }) {
       </tr>`).join('');
   }
 
-  function groupSection(label, players) {
+  let sectionId = 0;
+  function accordionSection(label, icon, players, startOpen) {
     if (!players.length) return '';
-    return `<tr class="roster-div-row"><td colspan="4">${label}</td></tr>${playerRows(players)}`;
+    const id = `acc-${abbr}-${sectionId++}`;
+    const openClass = startOpen ? 'open' : '';
+    return `
+      <div class="accordion-section">
+        <div class="accordion-header" onclick="toggleAccordion('${id}')">
+          <span class="accordion-title" style="color:${tc};">${icon} ${label}</span>
+          <span class="accordion-meta">
+            <span>${players.length} players</span>
+            <span class="accordion-arrow ${openClass}" id="arrow-${id}">▼</span>
+          </span>
+        </div>
+        <div class="accordion-body ${openClass}" id="${id}">
+          <table class="roster-table">
+            <thead><tr>
+              <th>POS</th><th>Player</th><th>B/T</th><th style="text-align:right;">#</th>
+            </tr></thead>
+            <tbody>${playerRows(players)}</tbody>
+          </table>
+        </div>
+      </div>`;
   }
 
   document.getElementById('teamModalRoster').innerHTML = `
-    <table class="roster-table">
-      <thead><tr>
-        <th>POS</th><th>Player</th><th>B/T</th><th style="text-align:right;">#</th>
-      </tr></thead>
-      <tbody>
-        ${groupSection('Two-Way Players ⭐', twoWay)}
-        ${groupSection('Pitchers', pitchers)}
-        ${groupSection('Catchers', catchers)}
-        ${groupSection('Infield', infield)}
-        ${groupSection('Outfield', outfield)}
-        ${groupSection('DH', dh)}
-      </tbody>
-    </table>`;
+    <div class="roster-accordion">
+      ${accordionSection('Two-Way Players', '⭐', twoWay, true)}
+      ${accordionSection('Pitchers', '🥎', pitchers, false)}
+      ${accordionSection('Catchers', '🧤', catchers, false)}
+      ${accordionSection('Infield', '🏟️', infield, false)}
+      ${accordionSection('Outfield', '⚾', outfield, false)}
+      ${accordionSection('DH', '🎯', dh, false)}
+    </div>`;
 }
 
 function toggleSidebar() {
@@ -3110,23 +3639,75 @@ function updateSidebarHRFeed() {
 }
 
 // ── PLAYER SEARCH ─────────────────────────────────────────────────────
+const TEAM_ID_TO_ABBR = {
+  109:'ARI',144:'ATL',110:'BAL',111:'BOS',112:'CHC',145:'CWS',113:'CIN',114:'CLE',
+  115:'COL',116:'DET',117:'HOU',118:'KC',108:'LAA',119:'LAD',146:'MIA',158:'MIL',
+  142:'MIN',121:'NYM',147:'NYY',133:'ATH',143:'PHI',134:'PIT',135:'SD',137:'SF',
+  136:'SEA',138:'STL',139:'TB',140:'TEX',141:'TOR',120:'WSH'
+};
+
 let allPlayers = [];
 function buildPlayerIndex() {
   allPlayers = [];
-  for (const p of hitters)    allPlayers.push({ name:p.name, team:p.team, id:p.id });
-  for (const p of hrPitchers) { if (!allPlayers.find(x=>x.id===p.id)) allPlayers.push({ name:p.name, team:p.team, id:p.id }); }
-  for (const p of koPitchers) { if (!allPlayers.find(x=>x.id===p.id)) allPlayers.push({ name:p.name, team:p.team, id:p.id }); }
+  const seen = new Set();
+
+  function addPlayer(id, name, team) {
+    if (!id || !name || seen.has(id)) return;
+    seen.add(id);
+    allPlayers.push({ id, name, team: team || '—' });
+  }
+
+  // From leaderboards
+  for (const p of hitters)    addPlayer(p.id, p.name, p.team);
+  for (const p of hrPitchers) addPlayer(p.id, p.name, p.team);
+  for (const p of koPitchers) addPlayer(p.id, p.name, p.team);
+
+  // From roster cache (keyed by teamId number)
+  for (const [key, roster] of Object.entries(rosterCache)) {
+    const abbr = TEAM_ID_TO_ABBR[key] || key;
+    for (const p of (roster || [])) {
+      addPlayer(p.person?.id, p.person?.fullName, abbr);
+    }
+  }
+
+  allPlayers.sort((a,b) => a.name.localeCompare(b.name));
+}
+
+// ── PRE-FETCH ALL ROSTERS FOR SEARCH ──────────────────────────────────
+// Runs silently in background after dashboard loads
+// Fetches all 30 rosters with a small delay between each to avoid hammering the API
+async function prefetchAllRosters() {
+  const TEAM_IDS = [
+    {id:109,abbr:'ARI'},{id:144,abbr:'ATL'},{id:110,abbr:'BAL'},{id:111,abbr:'BOS'},
+    {id:112,abbr:'CHC'},{id:145,abbr:'CWS'},{id:113,abbr:'CIN'},{id:114,abbr:'CLE'},
+    {id:115,abbr:'COL'},{id:116,abbr:'DET'},{id:117,abbr:'HOU'},{id:118,abbr:'KC'},
+    {id:108,abbr:'LAA'},{id:119,abbr:'LAD'},{id:146,abbr:'MIA'},{id:158,abbr:'MIL'},
+    {id:142,abbr:'MIN'},{id:121,abbr:'NYM'},{id:147,abbr:'NYY'},{id:133,abbr:'ATH'},
+    {id:143,abbr:'PHI'},{id:134,abbr:'PIT'},{id:135,abbr:'SD'}, {id:137,abbr:'SF'},
+    {id:136,abbr:'SEA'},{id:138,abbr:'STL'},{id:139,abbr:'TB'}, {id:140,abbr:'TEX'},
+    {id:141,abbr:'TOR'},{id:120,abbr:'WSH'}
+  ];
+
+  for (const team of TEAM_IDS) {
+    if (rosterCache[team.id]) continue; // already loaded
+    try {
+      await new Promise(r => setTimeout(r, 200)); // small delay between calls
+      const d = await fetchJSON(`${BASE}/teams/${team.id}/roster?rosterType=40Man&season=${SEASON}`);
+      rosterCache[team.id] = d.roster || [];
+      buildPlayerIndex(); // rebuild index as each roster comes in
+    } catch(e) { /* silent fail — search just won't include this team */ }
+  }
 }
 
 function handlePlayerSearch(val) {
   const el = document.getElementById('searchResults');
   if (!val || val.length < 2) { el.innerHTML = ''; return; }
   const q = val.toLowerCase();
-  const matches = allPlayers.filter(p=>p.name.toLowerCase().includes(q)).slice(0,8);
+  const matches = allPlayers.filter(p => p.name.toLowerCase().includes(q)).slice(0, 10);
   if (!matches.length) { el.innerHTML = `<div class="search-result-item" style="color:var(--text-dim);">No results found</div>`; return; }
   el.innerHTML = matches.map(p => {
     const tc = tickerTeamColor(p.team);
-    return `<div class="search-result-item" onclick="openGameModal(${p.id})">
+    return `<div class="search-result-item" onclick="openPlayerModal(${p.id},'${p.name.replace(/'/g,"\\'")}','${p.team}');document.getElementById('searchResults').innerHTML='';document.getElementById('sidebarSearch').value='';">
       <span style="flex:1;">${p.name}</span>
       <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:${tc};">${p.team}</span>
     </div>`;
