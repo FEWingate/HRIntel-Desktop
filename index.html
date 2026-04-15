@@ -763,6 +763,27 @@
   .player-stat-card .ps-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--text); }
 
   /* ── TEAM MODAL COMPONENTS ── */
+  /* Team leaders */
+  .leaders-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .leaders-col { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .leaders-col-header {
+    padding: 9px 12px; border-bottom: 1px solid var(--border);
+    font-family: 'Bebas Neue', sans-serif; font-size: 16px;
+    letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.03);
+  }
+  .leaders-col-stat { font-family: 'Bebas Neue', sans-serif; font-size: 16px; }
+  .leaders-player-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-bottom: 1px solid rgba(26,31,46,0.5);
+    cursor: pointer; transition: background 0.15s;
+  }
+  .leaders-player-row:last-child { border-bottom: none; }
+  .leaders-player-row:hover { background: var(--border2); }
+  .leaders-rank { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); flex-shrink: 0; width: 14px; }
+  .leaders-name { font-size: 11px; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .leaders-val  { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700; flex-shrink: 0; }
   .team-stat-pill {
     flex: 1; padding: 10px 12px; font-family: 'IBM Plex Mono', monospace;
     font-size: 11px; color: var(--text-mid); text-align: center;
@@ -770,15 +791,17 @@
   }
   .team-stat-pill:last-child { border-right: none; }
   .team-section-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 9px;
-    letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    letter-spacing: 3px; color: var(--text); text-transform: uppercase; font-weight: 600;
+    padding-bottom: 2px; border-bottom: 1px solid var(--border2); margin-bottom: 2px;
   }
   .dim-card {
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 64px;
   }
   .dim-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
-  .dim-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--text); }
+  .dim-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; text-align: center; min-width: 52px; }
+  .dim-val { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--text); }
 
   /* ── ROSTER ACCORDION ── */
   .roster-accordion { display: flex; flex-direction: column; gap: 6px; }
@@ -1006,7 +1029,7 @@
     font-family: 'IBM Plex Mono', monospace; font-size: 11px;
     outline: none; transition: border-color 0.2s;
   }
-  .sidebar-search::placeholder { color: var(--text-dim); }
+  .sidebar-search::placeholder { color: var(--text-mid); }
   .sidebar-search:focus { border-color: var(--accent-blue); }
   .search-results { margin-top: 6px; max-height: 200px; overflow-y: auto; }
   .search-result-item {
@@ -1330,7 +1353,7 @@
 
   <!-- TEAM MODAL -->
   <div class="mlb-modal-overlay" id="teamModalOverlay" onclick="closeTeamModal(event)">
-    <div class="mlb-modal" id="teamModal" style="max-width:680px;">
+    <div class="mlb-modal" id="teamModal" style="max-width:1200px;">
       <div class="mlb-modal-header" id="teamModalHeader">
         <div class="mlb-modal-title" id="teamModalTitle">Team</div>
         <button class="mlb-modal-close" onclick="closeTeamModal()">✕</button>
@@ -1344,35 +1367,53 @@
         <div class="team-stat-pill" id="tmCapacity">👥 —</div>
       </div>
 
-      <!-- PARK DIMENSIONS -->
-      <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
-        <div class="team-section-label">🏟️ Park Dimensions</div>
-        <div id="teamModalDimensions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-          <div class="dim-card"><div class="dim-label">LF</div><div class="dim-val" id="dimLF">—</div></div>
-          <div class="dim-card"><div class="dim-label">LC</div><div class="dim-val" id="dimLC">—</div></div>
-          <div class="dim-card"><div class="dim-label">CF</div><div class="dim-val" id="dimCF">—</div></div>
-          <div class="dim-card"><div class="dim-label">RC</div><div class="dim-val" id="dimRC">—</div></div>
-          <div class="dim-card"><div class="dim-label">RF</div><div class="dim-val" id="dimRF">—</div></div>
-          <div class="dim-card" id="dimHRCard" style="display:none;"><div class="dim-label">HR 2026</div><div class="dim-val" style="color:var(--accent-gold);" id="dimHR">—</div></div>
-        </div>
-      </div>
+      <!-- SPLIT LAYOUT -->
+      <div style="display:grid;grid-template-columns:3fr 2fr;min-height:600px;">
 
-      <!-- TEAM SEASON STATS -->
-      <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
-        <div class="team-section-label">📊 2026 Team Season Stats</div>
-        <div id="teamSeasonStats" style="margin-top:10px;">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px 0;">Loading stats...</div>
-        </div>
-      </div>
+        <!-- LEFT PANEL — Stats & Leaders (scrollable independently) -->
+        <div style="border-right:1px solid var(--border);overflow-y:auto;max-height:80vh;">
 
-      <!-- ROSTER -->
-      <div style="padding:16px 24px;">
-        <div class="team-section-label">📋 Active Roster</div>
-        <input class="sidebar-search" id="rosterSearch" type="text" placeholder="Search roster..." oninput="filterRoster(this.value)" style="margin:10px 0 8px;width:100%;">
-        <div id="teamModalRoster" style="margin-top:4px;">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:20px 0;text-align:center;">Loading roster...</div>
+          <!-- PARK DIMENSIONS -->
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
+            <div class="team-section-label">🏟️ Park Dimensions</div>
+            <div id="teamModalDimensions" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
+              <div class="dim-card"><div class="dim-label">LF</div><div class="dim-val" id="dimLF">—</div></div>
+              <div class="dim-card"><div class="dim-label">LC</div><div class="dim-val" id="dimLC">—</div></div>
+              <div class="dim-card"><div class="dim-label">CF</div><div class="dim-val" id="dimCF">—</div></div>
+              <div class="dim-card"><div class="dim-label">RC</div><div class="dim-val" id="dimRC">—</div></div>
+              <div class="dim-card"><div class="dim-label">RF</div><div class="dim-val" id="dimRF">—</div></div>
+              <div class="dim-card" id="dimHRCard" style="display:none;"><div class="dim-label">HR 2026</div><div class="dim-val" style="color:var(--accent-gold);" id="dimHR">—</div><div id="dimHRRank" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent-gold);opacity:0.7;margin-top:3px;"></div></div>
+            </div>
+          </div>
+
+          <!-- TEAM SEASON STATS -->
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
+            <div class="team-section-label">📊 2026 Team Season Stats</div>
+            <div id="teamSeasonStats" style="margin-top:10px;">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px 0;">Loading stats...</div>
+            </div>
+          </div>
+
+          <!-- TEAM LEADERS -->
+          <div style="padding:16px 20px;">
+            <div class="team-section-label">🏆 2026 Team Leaders — Top 5</div>
+            <div id="teamLeaders" style="margin-top:10px;">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px 0;">Loading leaders...</div>
+            </div>
+          </div>
+
         </div>
-      </div>
+
+        <!-- RIGHT PANEL — Roster (scrollable independently) -->
+        <div style="overflow-y:auto;max-height:80vh;padding:16px 20px;">
+          <div class="team-section-label">📋 Active Roster</div>
+          <input class="sidebar-search" id="rosterSearch" type="text" placeholder="Search roster..." oninput="filterRoster(this.value)" style="margin:10px 0 8px;width:100%;">
+          <div id="teamModalRoster" style="margin-top:4px;">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:20px 0;text-align:center;">Loading roster...</div>
+          </div>
+        </div>
+
+      </div><!-- end split layout -->
 
     </div>
   </div>
@@ -1614,7 +1655,7 @@
       </div>
       <div class="scroll-panel" style="max-height:600px;">
         <table class="stat-table">
-          <thead><tr><th>#</th><th colspan="2">Pitcher</th><th class="right">K</th><th class="right">K/G</th><th class="bar-cell"></th></tr></thead>
+          <thead><tr><th>#</th><th colspan="2">Pitcher</th><th class="right">GP</th><th class="right">K</th><th class="right">K/G</th><th class="bar-cell"></th></tr></thead>
           <tbody id="ko-body-v2"></tbody>
         </table>
       </div>
@@ -2237,8 +2278,16 @@ function renderNoHRAlerts(alerts) {
     const awayBadge = awayH ? `<span class="hand-badge ${awayH}" style="font-size:11px;width:20px;height:20px;">${awayH}</span>` : '';
     const homeBadge = homeH ? `<span class="hand-badge ${homeH}" style="font-size:11px;width:20px;height:20px;">${homeH}</span>` : '';
 
-    const venueTag  = `<span class="tag tag-nohr-venue">Bottom 10 Venue · ${a.venueData?.hr||0} HRs</span>`;
-    const teamTag   = `<span class="tag tag-nohr-team">Bottom 10 Team · ${a.battingTeamAbbr}</span>`;
+    // Actual venue league rank — venues sorted desc so find index from top
+    const venueLeagueRank = a.venueData ? venues.indexOf(venues.find(v => v.venueId === a.venueData.venueId)) + 1 : '?';
+    const venueHRs        = a.venueData?.hr ?? 0;
+    // Actual team league rank — teamHRLeaderboard sorted desc (most HRs first)
+    const allTeamIdx      = teamHRLeaderboard.findIndex(t => t.abbr === a.battingTeamAbbr);
+    const teamLeagueRank  = allTeamIdx >= 0 ? allTeamIdx + 1 : '?';
+    const teamHRs         = noHRTeams.find(t => t.abbr === a.battingTeamAbbr)?.hr ?? 0;
+
+    const venueTag  = `<span class="tag tag-nohr-venue">Venue HR Rank · #${venueLeagueRank} of 30 · ${venueHRs} HRs</span>`;
+    const teamTag   = `<span class="tag tag-nohr-team">Team HR Rank · #${teamLeagueRank} of 30 · ${teamHRs} HRs</span>`;
     const pitchTag  = a.bothPitchersNoHR ? `<span class="tag tag-nohr-pitcher">Both Pitchers Low HR</span>` : '';
     const tripleTag = a.type==='nohr-triple' ? `<span class="tag" style="background:rgba(223,0,255,0.15);color:#df00ff;border:1px solid rgba(223,0,255,0.4);">🛡️ ALL 3 CATEGORIES</span>` : '';
 
@@ -2376,6 +2425,7 @@ function renderKOPitchers() {
       <td>
         <div class="player-name">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span></div>
       </td>
+      <td class="stat-val" style="color:var(--text-mid);font-size:11px;">${p.games}</td>
       <td class="stat-val purple">${p.k}</td>
       <td class="stat-val" style="color:var(--text-mid);font-size:11px;">${p.kpg}</td>
       <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill purple" style="width:${Math.round(p.k/max*100)}%"></div></div></td>
@@ -3382,60 +3432,54 @@ const VENUE_ID_MAP = {
   'TOR':14,'WSH':3309
 };
 
-const teamModalCache = {}; // 40Man roster — includes active + IL players
+const teamModalCache = {}; // re-fetches fresh each session
 
 async function openTeamModal(abbr, name) {
-  // Show modal immediately with loading state
   document.getElementById('teamModalTitle').textContent = '⚾ ' + name;
-
-  // Apply team color to header
   const tc = tickerTeamColor(abbr);
   document.getElementById('teamModalHeader').style.borderBottom = `2px solid ${tc}`;
 
-  // Reset fields
   ['tmVenue','tmSurface','tmRoof','tmCapacity'].forEach(id => {
     document.getElementById(id).textContent = id === 'tmVenue' ? '🏟️ Loading...' :
       id === 'tmSurface' ? '🌿 —' : id === 'tmRoof' ? '☁️ —' : '👥 —';
   });
-  ['dimLF','dimLC','dimCF','dimRC','dimRF','dimHR'].forEach(id => {
-    document.getElementById(id).textContent = '—';
-  });
+  ['dimLF','dimLC','dimCF','dimRC','dimRF','dimHR'].forEach(id => { document.getElementById(id).textContent = '—'; });
   document.getElementById('dimHRCard').style.display = 'none';
   document.getElementById('teamSeasonStats').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px 0;">Loading stats...</div>`;
+  document.getElementById('teamLeaders').innerHTML     = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px 0;">Loading leaders...</div>`;
   document.getElementById('rosterSearch').value = '';
   document.getElementById('teamModalRoster').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:20px 0;text-align:center;">Loading roster...</div>`;
   document.getElementById('teamModalOverlay').classList.add('open');
 
-  // Use cache if available
-  if (teamModalCache[abbr]) {
-    renderTeamModal(abbr, teamModalCache[abbr]);
-    return;
-  }
+  if (teamModalCache[abbr]) { renderTeamModal(abbr, teamModalCache[abbr]); return; }
 
   try {
     const teamId  = TEAM_ID_MAP[abbr];
     const venueId = VENUE_ID_MAP[abbr];
 
-    // Fetch venue info, roster, team stats and standings all in parallel
-    const [venueData, rosterData, teamStatsData, standingsData] = await Promise.all([
+    const [venueData, rosterData, teamStatsData, standingsData, leadersHR, leadersHits, leadersAVG, leadersSO] = await Promise.all([
       venueId ? fetchJSON(`${BASE}/venues/${venueId}?hydrate=fieldInfo,location`).catch(()=>null) : null,
       teamId  ? fetchJSON(`${BASE}/teams/${teamId}/roster?rosterType=40Man&season=${SEASON}&hydrate=person`).catch(()=>({roster:[]})) : {roster:[]},
       teamId  ? fetchJSON(`${BASE}/teams/${teamId}/stats?stats=season&season=${SEASON}&group=hitting`).catch(()=>null) : null,
       teamId  ? fetchJSON(`${BASE}/standings?leagueId=103,104&season=${SEASON}&hydrate=team`).catch(()=>null) : null,
+      teamId  ? fetchJSON(`${BASE}/teams/${teamId}/leaders?leaderCategories=homeRuns&season=${SEASON}&leaderGameTypes=R&limit=5`).catch(()=>null) : null,
+      teamId  ? fetchJSON(`${BASE}/teams/${teamId}/leaders?leaderCategories=hits&season=${SEASON}&leaderGameTypes=R&limit=5`).catch(()=>null) : null,
+      teamId  ? fetchJSON(`${BASE}/teams/${teamId}/leaders?leaderCategories=battingAverage&season=${SEASON}&leaderGameTypes=R&limit=5`).catch(()=>null) : null,
+      teamId  ? fetchJSON(`${BASE}/teams/${teamId}/leaders?leaderCategories=strikeOuts&season=${SEASON}&leaderGameTypes=R&limit=5`).catch(()=>null) : null,
     ]);
 
-    const data = { venueData, rosterData, teamStatsData, standingsData };
+    const data = { venueData, rosterData, teamStatsData, standingsData, leadersHR, leadersHits, leadersAVG, leadersSO };
     teamModalCache[abbr] = data;
     renderTeamModal(abbr, data);
-
   } catch(e) {
     console.warn('Team modal fetch failed:', e);
     document.getElementById('tmVenue').textContent = '🏟️ Data unavailable';
   }
 }
 
-function renderTeamModal(abbr, { venueData, rosterData, teamStatsData, standingsData }) {
+function renderTeamModal(abbr, { venueData, rosterData, teamStatsData, standingsData, leadersHR, leadersHits, leadersAVG, leadersSO }) {
   const tc = tickerTeamColor(abbr);
+  const teamId = TEAM_ID_MAP[abbr];
   const venue = venueData?.venues?.[0];
 
   // Venue info
@@ -3445,7 +3489,9 @@ function renderTeamModal(abbr, { venueData, rosterData, teamStatsData, standings
     if (fi) {
       document.getElementById('tmSurface').textContent  = '🌿 ' + (fi.turfType || 'Grass');
       document.getElementById('tmRoof').textContent     = '☁️ ' + (fi.roofType || 'Open');
-      document.getElementById('tmCapacity').textContent = '👥 ' + (venue.location?.capacity ? venue.location.capacity.toLocaleString() : '—');
+      // Capacity can be in fieldInfo.capacity or venue.location.defaultCoordinates or venue.capacity
+      const cap = fi.capacity || venue.capacity || venue.location?.capacity;
+      document.getElementById('tmCapacity').textContent = '👥 ' + (cap ? Number(cap).toLocaleString() : '—');
       if (fi.leftLine)   { document.getElementById('dimLF').textContent = fi.leftLine + ' ft'; }
       if (fi.leftCenter) { document.getElementById('dimLC').textContent = fi.leftCenter + ' ft'; }
       if (fi.center)     { document.getElementById('dimCF').textContent = fi.center + ' ft'; }
@@ -3457,13 +3503,14 @@ function renderTeamModal(abbr, { venueData, rosterData, teamStatsData, standings
   // HR total from venues array
   const venueEntry = venues.find(v => v.venueId === VENUE_ID_MAP[abbr]);
   if (venueEntry) {
-    document.getElementById('dimHR').textContent = venueEntry.hr + ' HR';
+    const venueRank = venues.indexOf(venueEntry) + 1;
+    document.getElementById('dimHR').textContent = `${venueEntry.hr} HR`;
+    document.getElementById('dimHRRank').textContent = `(#${venueRank} of 30)`;
     document.getElementById('dimHRCard').style.display = 'block';
   }
 
   // ── TEAM SEASON STATS ──
   const statsEl = document.getElementById('teamSeasonStats');
-  const teamId  = TEAM_ID_MAP[abbr];
 
   // Find W-L record from standings
   let wl = '—', homeRec = '—', awayRec = '—', pct = '—', gb = '—';
@@ -3518,6 +3565,44 @@ function renderTeamModal(abbr, { venueData, rosterData, teamStatsData, standings
         ${statCard('R',    s?.runs??'—')}
       </div>
     </div>`;
+
+  // ── TEAM LEADERS ──
+  const leadersEl = document.getElementById('teamLeaders');
+  if (leadersEl) {
+    function leaderRows(leaderData, valKey, color) {
+      const leaders = leaderData?.teamLeaders?.[0]?.leaders || [];
+      if (!leaders.length) return `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);padding:8px;">No data</div>`;
+      return leaders.map((l, i) => {
+        const pid  = l.person?.id;
+        const name = l.person?.fullName || '—';
+        const val  = l.value ?? '—';
+        const firstName = name.split(' ')[0];
+        const lastName  = name.split(' ').slice(1).join(' ');
+        return `<div class="leaders-player-row" onclick="openPlayerModal(${pid},'${name.replace(/'/g,"\\'")}','${abbr}')">
+          <span class="leaders-rank">${i+1}</span>
+          <span class="leaders-name" title="${name}">${lastName}, ${firstName}</span>
+          <span class="leaders-val" style="${color?'color:'+color+';':''}">${val}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function leaderCol(title, icon, leaderData, valKey, color, headerColor) {
+      return `<div class="leaders-col">
+        <div class="leaders-col-header" style="color:${headerColor||color||'var(--text)'};">
+          <span>${icon} ${title}</span>
+          <span class="leaders-col-stat" style="color:${color||'var(--text)'};">${valKey.toUpperCase()}</span>
+        </div>
+        ${leaderRows(leaderData, valKey, color)}
+      </div>`;
+    }
+
+    leadersEl.innerHTML = `<div class="leaders-grid">
+      ${leaderCol('Home Runs',   '💣', leadersHR,   'hr',  tc,                         tc)}
+      ${leaderCol('Hits',        '⚾', leadersHits, 'hits', 'var(--accent-blue)',        'var(--accent-blue)')}
+      ${leaderCol('Batting Avg', '📊', leadersAVG,  'avg',  'var(--accent-green)',       'var(--accent-green)')}
+      ${leaderCol('Strikeouts',  '🔥', leadersSO,   'so',   'var(--accent-red)',         'var(--accent-red)')}
+    </div>`;
+  }
 
   // Roster — sort by position
   const posOrder = {TWP:-1,P:0,C:1,'1B':2,'2B':3,'3B':4,SS:5,LF:6,CF:7,RF:8,OF:9,DH:10};
