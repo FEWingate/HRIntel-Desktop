@@ -949,6 +949,8 @@
     opacity: 0; pointer-events: none;
     transition: opacity 0.25s ease; padding: 20px;
   }
+  /* Player modal always on top of everything */
+  #playerModalOverlay { z-index: 9999 !important; }
   .mlb-modal-overlay.open { opacity: 1; pointer-events: all; }
   .mlb-modal {
     background: var(--surface); border: 1px solid var(--border);
@@ -1419,50 +1421,6 @@
   </div>
 
   <!-- PLAYER MODAL -->
-  <div class="mlb-modal-overlay" id="playerModalOverlay" onclick="closePlayerModal(event)">
-    <div class="mlb-modal" id="playerModal" style="max-width:560px;">
-      <div class="mlb-modal-header" id="playerModalHeader" style="padding:16px 24px;">
-        <div style="display:flex;align-items:center;gap:16px;flex:1;">
-          <!-- Headshot -->
-          <div class="player-headshot-wrap">
-            <img id="playerHeadshot" class="player-headshot" src="" alt="Player" onerror="this.style.display='none';document.getElementById('playerHeadshotFallback').style.display='flex';">
-            <div id="playerHeadshotFallback" class="player-headshot-fallback" style="display:none;">⚾</div>
-          </div>
-          <!-- Name + Meta -->
-          <div>
-            <div class="mlb-modal-title" id="playerModalName">Player</div>
-            <div id="playerModalMeta" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:3px;letter-spacing:1px;">—</div>
-          </div>
-        </div>
-        <button class="mlb-modal-close" onclick="closePlayerModal()">✕</button>
-      </div>
-
-      <!-- PLAYER QUICK STATS -->
-      <div id="playerQuickStats" style="display:flex;gap:0;border-bottom:1px solid var(--border);">
-        <div class="team-stat-pill" id="plAge">🎂 —</div>
-        <div class="team-stat-pill" id="plHeight">📏 —</div>
-        <div class="team-stat-pill" id="plWeight">⚖️ —</div>
-        <div class="team-stat-pill" id="plBorn">📍 —</div>
-      </div>
-
-      <!-- SEASON STATS -->
-      <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
-        <div class="team-section-label">📊 2026 Season Stats</div>
-        <div id="playerSeasonStats" style="margin-top:12px;">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading stats...</div>
-        </div>
-      </div>
-
-      <!-- CAREER STATS -->
-      <div style="padding:16px 24px;">
-        <div class="team-section-label">🏆 Career Stats</div>
-        <div id="playerCareerStats" style="margin-top:12px;">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading...</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
   <!-- SCHEDULE MODAL -->
   <div class="mlb-modal-overlay" id="scheduleModalOverlay" onclick="closeScheduleModal(event)">
     <div class="mlb-modal" id="scheduleModal" style="max-width:1000px;">
@@ -2293,16 +2251,18 @@ function renderNoHRAlerts(alerts) {
 
     const pitcherLine = a.type==='nohr-triple'
       ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c77dff;margin-top:6px;">
-          ${awayBadge} ${a.awayPitcher?.name||'TBD'} · ${homeBadge} ${a.homePitcher?.name||'TBD'} — Both Low HR Starters
+          ${awayBadge} <span ${a.awayPitcher?.id?`onclick="openPlayerModal(${a.awayPitcher.id},'${(a.awayPitcher.name||'').replace(/'/g,"\\'")}','${a.game.away.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;"`:''}>${a.awayPitcher?.name||'TBD'}</span>
+          · ${homeBadge} <span ${a.homePitcher?.id?`onclick="openPlayerModal(${a.homePitcher.id},'${(a.homePitcher.name||'').replace(/'/g,"\\'")}','${a.game.home.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;"`:''}>${a.homePitcher?.name||'TBD'}</span>
+          — Both Low HR Starters
          </div>`
       : '';
 
     return `<div class="${cls}">
-      <div class="alert-game">${a.game.away.team} @ ${a.game.home.team} · ${a.game.time} · ${a.game.venue}</div>
+      <div class="alert-game">${a.game.away.team} @ ${a.game.home.team} · ${a.game.time} · <span onclick="openTeamModal('${a.game.home.team}','${(a.game.home?.name||a.game.home?.team||'').replace(/'/g,"\\'")}');" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${a.game.venue}</span></div>
       <div class="alert-matchup">
-        <span style="color:#c77dff;font-weight:600;">${a.battingTeamAbbr}</span>
+        <span onclick="openTeamModal('${a.battingTeamAbbr}','${a.battingTeamAbbr}');" style="color:#c77dff;font-weight:600;cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${a.battingTeamAbbr}</span>
         <span class="vs">batting at</span>
-        <span style="color:#c77dff;">${a.game.venue}</span>
+        <span onclick="openTeamModal('${a.game.home.team}','${(a.game.home?.name||a.game.home?.team||'').replace(/'/g,"\\'")}');" style="color:#c77dff;cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${a.game.venue}</span>
       </div>
       ${pitcherLine}
       <div class="alert-tags" style="margin-top:8px;">${venueTag}${teamTag}${pitchTag}${tripleTag}</div>
@@ -2324,21 +2284,23 @@ function renderAlerts(alerts) {
     const pBadge = pitcherHand ? `<span class="hand-badge ${pitcherHand}" style="font-size:11px;width:20px;height:20px;">${pitcherHand}</span>` : '';
     const bBadge = batterHand  ? `<span class="hand-badge ${batterHand}"  style="font-size:11px;width:20px;height:20px;">${batterHand}</span>`  : '';
 
-    // Build matchup line based on which categories are present
+    // Clickable helpers
+    const clickHitter  = a.hitter?.id  ? `onclick="openPlayerModal(${a.hitter.id},'${(a.hitter.name||'').replace(/'/g,"\\'")}','${a.game.away.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;"` : '';
+    const clickPitcher = a.pitcher?.id ? `onclick="openPlayerModal(${a.pitcher.id},'${(a.pitcher.name||'').replace(/'/g,"\\'")}','${a.game.home.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;"` : '';
+    const clickVenue   = `onclick="openTeamModal('${a.game.home.team}','${(a.game.home?.name||a.game.home?.team||'').replace(/'/g,"\\'")}');" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;"`;
+
+    // Build matchup line
     let matchupLine = '';
     if (a.venueOnly) {
-      // Pitcher + Venue only — no top 25 hitter confirmed yet
-      matchupLine = `<div class="alert-matchup"><span class="pitcher">${a.pitcher?.name||'TBD'}</span> ${pBadge} <span class="vs">at</span> <span style="color:var(--accent-gold)">${a.game.venue}</span></div>`;
+      matchupLine = `<div class="alert-matchup"><span class="pitcher" ${clickPitcher}>${a.pitcher?.name||'TBD'}</span> ${pBadge} <span class="vs">at</span> <span style="color:var(--accent-gold)" ${clickVenue}>${a.game.venue}</span></div>`;
     } else if (a.hitter && a.pitcher?.name !== 'TBD') {
-      matchupLine = `<div class="alert-matchup">${bBadge}<span class="batter">${a.hitter.name}</span><span class="vs">vs</span>${pBadge}<span class="pitcher">${a.pitcher.name}</span></div>`;
+      matchupLine = `<div class="alert-matchup">${bBadge}<span class="batter" ${clickHitter}>${a.hitter.name}</span><span class="vs">vs</span>${pBadge}<span class="pitcher" ${clickPitcher}>${a.pitcher.name}</span></div>`;
     } else if (a.hitter && !a.hasPitcher) {
-      // Hitter + Venue only
-      matchupLine = `<div class="alert-matchup">${bBadge}<span class="batter">${a.hitter.name}</span> <span class="vs">at</span> <span style="color:var(--accent-gold)">${a.game.venue}</span></div>`;
+      matchupLine = `<div class="alert-matchup">${bBadge}<span class="batter" ${clickHitter}>${a.hitter.name}</span> <span class="vs">at</span> <span style="color:var(--accent-gold)" ${clickVenue}>${a.game.venue}</span></div>`;
     } else {
-      matchupLine = `<div class="alert-matchup">${bBadge}<span class="batter">${a.hitter?.name||'—'}</span><span class="vs">vs</span>${pBadge}<span class="pitcher">${a.pitcher?.name||'TBD'}</span></div>`;
+      matchupLine = `<div class="alert-matchup">${bBadge}<span class="batter" ${clickHitter}>${a.hitter?.name||'—'}</span><span class="vs">vs</span>${pBadge}<span class="pitcher" ${clickPitcher}>${a.pitcher?.name||'TBD'}</span></div>`;
     }
 
-    // Build category tags
     const hitterTag  = a.hitter  ? `<span class="tag tag-hr">HR Rank #${a.hitter.rank} · ${a.hitter.hr} HR</span>` : '';
     const pitcherTag = a.hasPitcher && a.pitcher?.rank !== '—'
       ? `<span class="tag tag-pitcher">Pitcher Rank #${a.pitcher.rank} · ${a.pitcher.hr} HR allowed</span>`
@@ -2347,9 +2309,9 @@ function renderAlerts(alerts) {
     const tripleTag  = a.type==='triple' ? `<span class="tag tag-rank">⚡ ALL 3 CATEGORIES</span>` : '';
 
     return `<div class="${cls}">
-      <div class="alert-game">${a.game.away.team} @ ${a.game.home.team} · ${a.game.time} · ${a.game.venue}${a.probable?' · (Probable – lineup TBD)':''}</div>
+      <div class="alert-game">${a.game.away.team} @ ${a.game.home.team} · ${a.game.time} · <span ${clickVenue}>${a.game.venue}</span>${a.probable?' · (Probable – lineup TBD)':''}</div>
       ${matchupLine}
-      ${a.type==='triple'?`<div class="alert-venue">📍 ${a.game.venue} — #${a.venueRank} HR Venue · ${a.venueData?.hr||''} HRs this season</div>`:''}
+      ${a.type==='triple'?`<div class="alert-venue">📍 <span ${clickVenue}>${a.game.venue}</span> — #${a.venueRank} HR Venue · ${a.venueData?.hr||''} HRs this season</div>`:''}
       <div class="alert-tags">
         ${hitterTag}${pitcherTag}${venueTag}${tripleTag}
         <span class="tag tag-time">${a.game.time}</span>
@@ -2382,7 +2344,7 @@ function renderHitters(alertIds) {
       <td class="rank">${ranks[i]}</td>
       <td style="width:20px;padding-right:4px;">${hBadge}</td>
       <td>
-        <div class="player-name">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}</div>
+        <div class="player-name" onclick="openPlayerModal(${p.id},'${(p.name||'').replace(/'/g,"\\'")}','${p.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}</div>
       </td>
       <td class="stat-val blue">${p.hr}</td>
       <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill blue" style="width:${Math.round(p.hr/max*100)}%"></div></div></td>
@@ -2403,7 +2365,7 @@ function renderPitcherTable(tbodyId, list, color, valKey, alertIds) {
       <td class="rank">${ranks[i]}</td>
       <td style="width:20px;padding-right:4px;">${hBadge}</td>
       <td>
-        <div class="player-name">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}</div>
+        <div class="player-name" onclick="openPlayerModal(${p.id},'${(p.name||'').replace(/'/g,"\\'")}','${p.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}</div>
       </td>
       <td class="stat-val ${color}">${p[valKey]}</td>
       <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill ${color}" style="width:${Math.round(p[valKey]/max*100)}%"></div></div></td>
@@ -2423,7 +2385,7 @@ function renderKOPitchers() {
       <td class="rank">${ranks[i]}</td>
       <td style="width:20px;padding-right:4px;">${hBadge}</td>
       <td>
-        <div class="player-name">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span></div>
+        <div class="player-name" onclick="openPlayerModal(${p.id},'${(p.name||'').replace(/'/g,"\\'")}','${p.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span></div>
       </td>
       <td class="stat-val" style="color:var(--text-mid);font-size:11px;">${p.games}</td>
       <td class="stat-val purple">${p.k}</td>
@@ -2450,7 +2412,7 @@ function renderAllVenues(alertVenueIds) {
     return `<tr class="${rowClass}">
       <td class="rank">${ranks[i]}</td>
       <td>
-        <div class="player-name">${v.name}${star}${bottom}${isAlert?'<span class="alert-dot"></span>':''}</div>
+        <div class="player-name" onclick="openTeamModal('${v.team}','${v.name.replace(/'/g,"\\'")}');" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${v.name}${star}${bottom}${isAlert?'<span class="alert-dot"></span>':''}</div>
         <span class="team-badge">${v.team}</span>
       </td>
       <td class="stat-val gold">${v.hr}</td>
@@ -2470,7 +2432,7 @@ function renderAllStadiums() {
       ${col.map((v,i)=>{
         const globalIdx = i + ci*perCol;
         const isTop10 = globalIdx < 10;
-        return `<div class="venue-row ${isTop10?'top10':''}">
+        return `<div class="venue-row ${isTop10?'top10':''}" onclick="openTeamModal('${v.team}','${v.name.replace(/'/g,"\\'")}');" style="cursor:pointer;">
           <span class="venue-rank-badge">${allRanks[globalIdx]}</span>
           <div class="venue-info">
             <div class="venue-name-text">${v.name} ${isTop10?'<span class="star-mark">⭐</span>':''}</div>
@@ -2493,7 +2455,7 @@ function renderTeamHRLeaderboard() {
     return `<tr ${rowStyle}>
       <td class="rank">${ranks[i]}</td>
       <td>
-        <div class="player-name">${t.name} <span class="name-team-tag">${t.abbr} (${t.league})</span></div>
+        <div class="player-name" onclick="openTeamModal('${t.abbr}','${(t.name||'').replace(/'/g,"\\'")}');" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${t.name} <span class="name-team-tag">${t.abbr} (${t.league})</span></div>
       </td>
       <td class="stat-val" style="color:var(--accent-green);">${t.hr}</td>
       <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.round(t.hr/max*100)}%;background:var(--accent-green);"></div></div></td>
@@ -2630,10 +2592,10 @@ async function renderGames(alerts, noHRAlerts) {
         <button class="hrps-info-btn" onclick="event.stopPropagation();showLegend(this)" title="How is this calculated?">ⓘ</button>
       </div>` : '';
 
-    function leaderRows(arr) {
+    function leaderRows(arr, teamAbbr) {
       return (arr||[]).map(p=>{
         const isTop25 = hitterIds.has(p.id);
-        return `<div class="hitter-row">
+        return `<div class="hitter-row" onclick="event.stopPropagation();openPlayerModal(${p.id},'${(p.name||'').replace(/'/g,"\\'")}','${teamAbbr}')" style="cursor:pointer;border-radius:4px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background=''">
           <div class="hitter-row-name">${p.name}${isTop25?`<span class="top25-badge">#${hitterMap[p.id]?.rank} TOP 25</span>`:''}</div>
           <div class="hitter-row-hr">${p.hr} HR</div>
         </div>`;
@@ -2643,10 +2605,12 @@ async function renderGames(alerts, noHRAlerts) {
     function pitcherLine(side) {
       const pName = game[side].pitcherName;
       const pId   = game[side].pitcherId;
+      const pTeam = game[side].team;
       const hand  = pId ? handednessCache[pId] : null;
       const isTop25HR = pId && pitcherIds.has(pId);
       const label = side==='away' ? 'Away SP' : 'Home SP';
-      return `<div class="pitcher-line">
+      const clickable = pId && pName;
+      return `<div class="pitcher-line" ${clickable?`onclick="event.stopPropagation();openPlayerModal(${pId},'${(pName||'').replace(/'/g,"\\'")}','${pTeam}')" style="cursor:pointer;border-radius:4px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background=''"`:''}>
         <div class="pitcher-line-left">
           ${hand ? handBadge(hand) : ''}
           <div class="pitcher-name-label">${label}: <span>${pName||'TBD'}</span></div>
@@ -2663,7 +2627,11 @@ async function renderGames(alerts, noHRAlerts) {
       const hand = handednessCache[a.pitcher.id];
       const statsStr = stat ? `${stat.ab} AB · ${stat.hr} HR · ${stat.avg}` : 'No career data';
       return `<div class="h2h-row">
-        <div class="h2h-names"><strong>${a.hitter.name}</strong> vs ${hand?handBadge(hand):''} <strong>${a.pitcher.name}</strong></div>
+        <div class="h2h-names">
+          <strong onclick="event.stopPropagation();openPlayerModal(${a.hitter.id},'${(a.hitter.name||'').replace(/'/g,"\\'")}','${game.away.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${a.hitter.name}</strong>
+          vs ${hand?handBadge(hand):''}
+          <strong onclick="event.stopPropagation();openPlayerModal(${a.pitcher.id},'${(a.pitcher.name||'').replace(/'/g,"\\'")}','${game.home.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${a.pitcher.name}</strong>
+        </div>
         <div class="h2h-stats">${statsStr}</div>
       </div>`;
     }).join('');
@@ -2671,7 +2639,7 @@ async function renderGames(alerts, noHRAlerts) {
     return `<div class="game-card ${threat?threat+'-game':noHRThreatMap[game.gamePk]?noHRThreatMap[game.gamePk]+'-game':''}" onclick="openGameModal(${game.gamePk})">
       <div class="game-card-header">
         <div class="game-teams"><span class="away">${game.away.team}</span><span class="at">@</span><span class="home">${game.home.team}</span></div>
-        <div class="game-meta">${game.time} · ${game.venue}${isTop10V?' ⭐':''}</div>
+        <div class="game-meta">${game.time} · <span onclick="event.stopPropagation();openTeamModal('${game.home.team}','${(game.home.name||game.home.team).replace(/'/g,"\\'")}');return false;" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;" title="View ${game.home.name||game.home.team} info">${game.venue}</span>${isTop10V?' ⭐':''}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
           ${threat?`<div class="threat-badge ${threat}">${threat==='triple'?'⚡ TRIPLE THREAT':'🔶 DOUBLE THREAT'}</div>`:''}
           ${noHRThreatMap[game.gamePk]?`<div class="threat-badge ${noHRThreatMap[game.gamePk]}">${noHRThreatMap[game.gamePk]==='nohr-triple'?'⚡ NO HR TRIPLE':'🛡️ NO HR DOUBLE'}</div>`:''}
@@ -2682,11 +2650,11 @@ async function renderGames(alerts, noHRAlerts) {
       <div class="game-card-body">
         <div class="team-section">
           <div class="team-label">${game.away.team} — Top HR Hitters</div>
-          ${leaderRows(leaders?.awayLeaders)}
+          ${leaderRows(leaders?.awayLeaders, game.away.team)}
         </div>
         <div class="team-section">
           <div class="team-label">${game.home.team} — Top HR Hitters</div>
-          ${leaderRows(leaders?.homeLeaders)}
+          ${leaderRows(leaders?.homeLeaders, game.home.team)}
         </div>
         <div class="pitcher-matchup">
           ${pitcherLine('away')}
@@ -3993,7 +3961,7 @@ async function openGameModal(gamePk) {
   // Open modal immediately with loading state
   const overlay = document.getElementById('modalOverlay');
   document.getElementById('modalTitle').textContent = `${game.away.team} @ ${game.home.team}`;
-  document.getElementById('modalSubtitle').textContent = `${game.time} · ${game.venue}`;
+  document.getElementById('modalSubtitle').innerHTML = `${game.time} · <span onclick="openTeamModal('${game.home.team}','${(game.home.name||game.home.team).replace(/'/g,"\\'")}');closeModalDirect();" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;">${game.venue}</span>`;
   document.getElementById('modalBody').innerHTML = `<div class="modal-loading">⚾ LOADING GAME DATA...</div>`;
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -4287,7 +4255,7 @@ function renderModal(game, data) {
         ${recent.map(r=>`<div class="recent-start-row">${r.date} vs ${r.opponent} — ${r.ip} IP · ${r.er} ER · ${r.k} K · ${r.hr} HR</div>`).join('')}
       </div>` : '';
     return `<div class="pitcher-exp-card">
-      <div class="pitcher-exp-name">${hand?handBadge(hand):''} ${p.pitcherName}</div>
+      <div class="pitcher-exp-name" onclick="openPlayerModal(${p.pitcherId},'${(p.pitcherName||'').replace(/'/g,"\\'")}','${p.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;">${hand?handBadge(hand):''} ${p.pitcherName}</div>
       <div class="pitcher-exp-team">${p.team} · ${side==='away'?'Away':'Home'} Starter</div>
       ${statRow}
       ${recentRow}
@@ -4337,7 +4305,7 @@ function renderModal(game, data) {
               <div class="player-cell">
                 <span class="player-num">${i+1}</span>
                 ${batHand?handBadge(batHand):''}
-                <span class="player-name-cell">${name}${isTop25?` <span class="top25-badge">#${hitter?.rank}</span>`:''}</span>
+                <span class="player-name-cell" onclick="openPlayerModal(${id},'${name.replace(/'/g,"\\'")}','${side==='away'?game.away.team:game.home.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${name}${isTop25?` <span class="top25-badge">#${hitter?.rank}</span>`:''}</span>
               </div>
             </td>
             <td class="today-val">${todayAB}</td>
@@ -4385,8 +4353,8 @@ function renderModal(game, data) {
       const isHot = stat && stat.hr > 0;
       allH2HRows.push(`<div class="h2h-full-row">
         <div class="h2h-full-names">
-          ${batHand?handBadge(batHand):''} <strong>${hitter?.name}</strong>
-          <span>vs ${pitchHand?handBadge(pitchHand):''} <strong>${game.home.pitcherName}</strong></span>
+          ${batHand?handBadge(batHand):''} <strong onclick="openPlayerModal(${bid},'${(hitter?.name||'').replace(/'/g,"\\'")}','${game.away.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${hitter?.name}</strong>
+          <span>vs ${pitchHand?handBadge(pitchHand):''} <strong onclick="openPlayerModal(${game.home.pitcherId},'${(game.home.pitcherName||'').replace(/'/g,"\\'")}','${game.home.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${game.home.pitcherName}</strong></span>
         </div>
         <div class="h2h-full-stats">
           ${stat ? `
@@ -4410,8 +4378,8 @@ function renderModal(game, data) {
       const isHot = stat && stat.hr > 0;
       allH2HRows.push(`<div class="h2h-full-row">
         <div class="h2h-full-names">
-          ${batHand?handBadge(batHand):''} <strong>${hitter?.name}</strong>
-          <span>vs ${pitchHand?handBadge(pitchHand):''} <strong>${game.away.pitcherName}</strong></span>
+          ${batHand?handBadge(batHand):''} <strong onclick="openPlayerModal(${bid},'${(hitter?.name||'').replace(/'/g,"\\'")}','${game.home.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${hitter?.name}</strong>
+          <span>vs ${pitchHand?handBadge(pitchHand):''} <strong onclick="openPlayerModal(${game.away.pitcherId},'${(game.away.pitcherName||'').replace(/'/g,"\\'")}','${game.away.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${game.away.pitcherName}</strong></span>
         </div>
         <div class="h2h-full-stats">
           ${stat ? `
@@ -4490,5 +4458,42 @@ setInterval(async () => {
 if ('Notification' in window && Notification.permission==='default') Notification.requestPermission();
 initDashboard();
 </script>
+  <!-- PLAYER MODAL — must be last element so it sits above all other modals -->
+  <div class="mlb-modal-overlay" id="playerModalOverlay" onclick="closePlayerModal(event)" style="z-index:9999;">
+    <div class="mlb-modal" id="playerModal" style="max-width:560px;">
+      <div class="mlb-modal-header" id="playerModalHeader" style="padding:16px 24px;">
+        <div style="display:flex;align-items:center;gap:16px;flex:1;">
+          <div class="player-headshot-wrap">
+            <img id="playerHeadshot" class="player-headshot" src="" alt="Player" onerror="this.style.display='none';document.getElementById('playerHeadshotFallback').style.display='flex';">
+            <div id="playerHeadshotFallback" class="player-headshot-fallback" style="display:none;">⚾</div>
+          </div>
+          <div>
+            <div class="mlb-modal-title" id="playerModalName">Player</div>
+            <div id="playerModalMeta" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:3px;letter-spacing:1px;">—</div>
+          </div>
+        </div>
+        <button class="mlb-modal-close" onclick="closePlayerModal()">✕</button>
+      </div>
+      <div id="playerQuickStats" style="display:flex;gap:0;border-bottom:1px solid var(--border);">
+        <div class="team-stat-pill" id="plAge">🎂 —</div>
+        <div class="team-stat-pill" id="plHeight">📏 —</div>
+        <div class="team-stat-pill" id="plWeight">⚖️ —</div>
+        <div class="team-stat-pill" id="plBorn">📍 —</div>
+      </div>
+      <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
+        <div class="team-section-label">📊 2026 Season Stats</div>
+        <div id="playerSeasonStats" style="margin-top:12px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading stats...</div>
+        </div>
+      </div>
+      <div style="padding:16px 24px;">
+        <div class="team-section-label">🏆 Career Stats</div>
+        <div id="playerCareerStats" style="margin-top:12px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
