@@ -1826,34 +1826,17 @@ let noHRPitchersAL=[], noHRPitchersNL=[], noHRTeams=[], teamHRLeaderboard=[];
 
 // ── UTILS ──────────────────────────────────────────────────────────
 async function fetchJSON(url) {
-  // Try direct first (works on GitHub Pages)
+  // Try direct first, fall back to CORS proxy if blocked (common when opening as local file)
   try {
     const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
-  } catch(e) {}
-
-  // Fallback 1: corsproxy.io
-  try {
-    const r2 = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
-    if (!r2.ok) throw new Error(`Proxy1 ${r2.status}`);
-    return r2.json();
-  } catch(e) {}
-
-  // Fallback 2: allorigins
-  try {
-    const r3 = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-    if (!r3.ok) throw new Error(`Proxy2 ${r3.status}`);
-    return r3.json();
-  } catch(e) {}
-
-  // Fallback 3: corsproxy alternate
-  try {
-    const r4 = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(url)}`);
-    if (!r4.ok) throw new Error(`Proxy3 ${r4.status}`);
-    return r4.json();
   } catch(e) {
-    throw new Error(`All fetch attempts failed for: ${url}`);
+    // Fallback: use a CORS proxy
+    const proxy = 'https://corsproxy.io/?';
+    const r2 = await fetch(proxy + encodeURIComponent(url));
+    if (!r2.ok) throw new Error(`Proxy HTTP ${r2.status}`);
+    return r2.json();
   }
 }
 function todayStr() {
@@ -2735,6 +2718,10 @@ async function renderGames(alerts, noHRAlerts) {
   }
 
   container.innerHTML = todayGames.map(game=>{
+    // Safety guard — skip any game with missing team data
+    if (!game || !game.away || !game.home) return '';
+    try {
+
     const threat    = threatMap[game.gamePk];
     const leaders   = leaderMap[game.gamePk];
     const gAlerts   = gameAlertsMap[game.gamePk]||[];
@@ -2776,6 +2763,7 @@ async function renderGames(alerts, noHRAlerts) {
     }
 
     function pitcherLine(side) {
+      if (!game[side]) return '';
       const pName = game[side].pitcherName;
       const pId   = game[side].pitcherId;
       const pTeam = game[side].team;
@@ -2836,6 +2824,7 @@ async function renderGames(alerts, noHRAlerts) {
         ${h2hRows?`<div class="h2h-section"><div class="h2h-label">⚔ Head-to-Head History</div>${h2hRows}</div>`:''}
       </div>
     </div>`;
+    } catch(e) { console.warn('Game card render error:', e); return ''; }
   }).join('');
 }
 
