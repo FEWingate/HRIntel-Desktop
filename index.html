@@ -1198,9 +1198,20 @@
     .panel { width: 100% !important; }
     .panel-header { padding: 12px 14px 10px; }
 
-    /* Leaderboard tables — full width */
-    .stat-table { font-size: 11px; }
-    .bar-cell { display: none; } /* hide bar charts on mobile */
+    /* Stack all leaderboard grids to single column on mobile */
+    .boards-grid { grid-template-columns: 1fr !important; padding: 10px !important; gap: 10px !important; }
+    .panel { width: 100% !important; min-width: 0 !important; }
+    .panel-header { padding: 12px 14px 10px; }
+    .scroll-panel { max-height: none !important; overflow: visible !important; }
+    /* Fix player names — allow wrapping but don't break mid-word */
+    .player-name { white-space: normal !important; word-break: normal !important; overflow-wrap: anywhere !important; }
+    .name-team-tag { display: inline !important; }
+    /* Stack venues stadiums 3-column grid to single column */
+    .stadiums-inner { grid-template-columns: 1fr !important; }
+    .stadiums-col-wrap { border-right: none !important; border-bottom: 1px solid var(--border); }
+    .stadiums-col-wrap:last-child { border-bottom: none; }
+    /* Hide bar charts on mobile to save space */
+    .bar-cell { display: none !important; }
 
     /* Footer hidden on mobile */
     footer { display: none; }
@@ -1377,7 +1388,7 @@
   <nav class="mobile-bottom-nav" id="mobileBottomNav">
     <div class="mobile-bottom-nav-inner">
       <button class="mobile-nav-btn active" id="mnav-games" onclick="switchTopNav('games',null)">
-        <span class="mnav-icon">🎮</span>Games
+        <span class="mnav-icon">📅</span>Games
       </button>
       <button class="mobile-nav-btn" id="mnav-threats" onclick="switchTopNav('threats',null)">
         <span class="mnav-icon">⚡</span>Threats
