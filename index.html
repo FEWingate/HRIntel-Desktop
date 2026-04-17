@@ -190,7 +190,7 @@
   .hr-ticker-track {
     display: flex; align-items: center;
     white-space: nowrap;
-    animation: tickerScroll 40s linear infinite;
+    animation: tickerScroll 30s linear infinite;
     will-change: transform;
   }
   .hr-ticker-track:hover { animation-play-state: paused; }
@@ -4069,19 +4069,51 @@ function renderHRTicker() {
 
   if (!items.length) return;
 
+  if (!items.length) return;
+
+  // Double the items for seamless infinite loop
   const html = [...items, ...items].join('');
   track.innerHTML = html;
-  track.style.animation = '';
+
+  // Kill any existing animation
+  track.style.animation = 'none';
+  track.style.transform = 'translateX(0)';
 
   if (items.length >= 3) {
-    // Enough players — scroll smoothly
-    const duration = Math.max(20, items.length * 4);
-    track.style.animationDuration = `${duration}s`;
-    track.style.animationName = 'tickerScroll';
+    // Wait for DOM to render then measure and animate
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const fullWidth  = track.scrollWidth; // total width of doubled content
+        const halfWidth  = fullWidth / 2;     // width of one full set of items
+        const speed      = 50;               // pixels per second
+        let pos          = 0;
+        let lastTime     = null;
+
+        // Cancel any existing ticker animation
+        if (window._tickerAnimId) cancelAnimationFrame(window._tickerAnimId);
+
+        function step(ts) {
+          if (!lastTime) lastTime = ts;
+          const delta = ts - lastTime;
+          lastTime = ts;
+
+          pos += speed * (delta / 1000);
+
+          // When we've scrolled one full set, reset silently to 0 (seamless loop)
+          if (pos >= halfWidth) {
+            pos -= halfWidth;
+          }
+
+          track.style.transform = `translateX(-${pos}px)`;
+          window._tickerAnimId = requestAnimationFrame(step);
+        }
+
+        window._tickerAnimId = requestAnimationFrame(step);
+      });
+    });
   } else {
-    // 1-2 players — no scrolling, just display statically
-    track.style.animationName = 'none';
-    track.innerHTML = items.join(''); // no need to double
+    track.style.transform = 'translateX(0)';
+    track.innerHTML = items.join('');
   }
 }
 
