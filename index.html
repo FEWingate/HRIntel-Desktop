@@ -1130,6 +1130,117 @@
 
   footer { border-top: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
   .footer-note { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
+
+  /* ── MOBILE BOTTOM NAV ── */
+  .mobile-bottom-nav {
+    display: none; /* hidden on desktop */
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+    display: none;
+  }
+  .mobile-bottom-nav-inner {
+    display: flex; align-items: center; justify-content: space-around;
+  }
+  .mobile-nav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: none; border: none; color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 1px;
+    text-transform: uppercase; cursor: pointer; padding: 4px 8px;
+    transition: color 0.15s; min-width: 52px;
+  }
+  .mobile-nav-btn .mnav-icon { font-size: 20px; line-height: 1; }
+  .mobile-nav-btn.active { color: var(--accent-blue); }
+  .mobile-nav-btn.active .mnav-icon { filter: drop-shadow(0 0 4px var(--accent-blue)); }
+
+  /* ── MOBILE RESPONSIVE (≤ 768px) ── */
+  @media (max-width: 768px) {
+
+    /* Show bottom nav, hide top nav tabs */
+    .mobile-bottom-nav { display: block; }
+    .top-nav { display: none !important; }
+
+    /* Shrink header */
+    header { padding: 0 12px; height: 48px; }
+    .logo-main { font-size: 18px; }
+    .logo-sub { display: none; }
+    .header-right { gap: 6px; }
+    #lastUpdated { display: none; }
+    .live-dot { width: 7px; height: 7px; }
+
+    /* Ticker smaller */
+    .hr-ticker-wrap { padding: 0 8px; }
+    .hr-ticker-label { font-size: 8px; padding: 0 6px; }
+    .hr-ticker-item { font-size: 11px; padding: 0 10px; }
+
+    /* Sidebar hidden by default on mobile — hamburger opens it */
+    .sidebar { position: fixed; left: -280px; top: 0; height: 100vh; z-index: 50; transition: left 0.3s ease; width: 280px; }
+    .sidebar.open { left: 0; }
+    .sidebar-toggle { display: flex !important; }
+    .main-content { width: 100%; padding-bottom: 70px; /* space for bottom nav */ }
+
+    /* Game cards — single column */
+    .games-grid { grid-template-columns: 1fr !important; gap: 10px; padding: 10px; }
+    .game-card { border-radius: 10px; }
+
+    /* Sections padding */
+    .top-nav-section { padding: 0; }
+    .panel-wrap { padding: 10px; gap: 10px; flex-direction: column; }
+    .panel { width: 100% !important; }
+    .panel-header { padding: 12px 14px 10px; }
+
+    /* Leaderboard tables — full width */
+    .stat-table { font-size: 11px; }
+    .bar-cell { display: none; } /* hide bar charts on mobile */
+
+    /* Footer hidden on mobile */
+    footer { display: none; }
+
+    /* ── TEAM MODAL — stack panels vertically ── */
+    #teamModal { max-width: 100% !important; max-height: 95vh; border-radius: 12px 12px 0 0; margin: auto 0 0 0; }
+    #teamModal > div[style*="grid"] { grid-template-columns: 1fr !important; }
+    #teamModal > div[style*="grid"] > div:first-child { border-right: none !important; border-bottom: 1px solid var(--border); max-height: none !important; }
+    #teamModal > div[style*="grid"] > div:last-child { max-height: 50vh; }
+
+    /* Team leaders — 2x2 on mobile */
+    .leaders-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+    /* ── MLB MODAL — stack AL/NL vertically ── */
+    #mlbModal { max-width: 100% !important; border-radius: 12px 12px 0 0; margin: auto 0 0 0; }
+    #mlbModal .mlb-modal-body { grid-template-columns: 1fr !important; }
+    #mlbModal .mlb-league-col:first-child { border-right: none !important; border-bottom: 1px solid var(--border); }
+
+    /* Standings — hide less important columns */
+    #standingsBody > div { grid-template-columns: 1fr !important; }
+    #standingsBody > div > div { border-right: none !important; border-bottom: 1px solid var(--border); }
+    .standings-table th.right:nth-child(n+5),
+    .standings-table td:nth-child(n+5) { display: none; } /* hide Home/Away/Strk on mobile */
+
+    /* ── PLAYER MODAL ── */
+    #playerModal { max-width: 100% !important; border-radius: 12px 12px 0 0; margin: auto 0 0 0; }
+
+    /* ── SCHEDULE MODAL ── */
+    #scheduleModal { max-width: 100% !important; border-radius: 12px 12px 0 0; margin: auto 0 0 0; }
+    .sched-grid { grid-template-columns: 1fr !important; }
+
+    /* ── GAME DETAIL MODAL ── */
+    .modal { border-radius: 12px 12px 0 0; max-height: 92vh; margin: auto 0 0 0; }
+    .modal-overlay { align-items: flex-end; padding: 0; }
+
+    /* All mlb modals slide up from bottom */
+    .mlb-modal-overlay { align-items: flex-end; padding: 0; }
+    .mlb-modal { border-radius: 12px 12px 0 0; max-height: 92vh; width: 100%; }
+
+    /* Dim cards smaller */
+    .dim-card { padding: 8px 10px; min-width: 48px; }
+    .dim-val { font-size: 16px; }
+
+    /* Pitcher matchup in game cards */
+    .pitcher-cards { flex-direction: column; gap: 8px; }
+
+    /* HR ticker */
+    .hr-ticker-wrap { height: 28px; }
+  }
 </style>
 </head>
 <body>
@@ -1253,7 +1364,26 @@
     </div>
   </header>
 
-  <!-- HR TICKER -->
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav">
+    <div class="mobile-bottom-nav-inner">
+      <button class="mobile-nav-btn active" id="mnav-games" onclick="switchTopNav('games',null)">
+        <span class="mnav-icon">🎮</span>Games
+      </button>
+      <button class="mobile-nav-btn" id="mnav-threats" onclick="switchTopNav('threats',null)">
+        <span class="mnav-icon">⚡</span>Threats
+      </button>
+      <button class="mobile-nav-btn" id="mnav-leaders" onclick="switchTopNav('leaders',null)">
+        <span class="mnav-icon">🏆</span>Leaders
+      </button>
+      <button class="mobile-nav-btn" id="mnav-venues" onclick="switchTopNav('venues',null)">
+        <span class="mnav-icon">🏟️</span>Venues
+      </button>
+      <button class="mobile-nav-btn" id="mnav-pitching" onclick="switchTopNav('pitching',null)">
+        <span class="mnav-icon">⚾</span>Pitching
+      </button>
+    </div>
+  </nav>
   <div class="hr-ticker-wrap" id="hrTickerWrap">
     <div class="hr-ticker-label" id="hrTickerLabel">⚡ TODAY</div>
     <div style="overflow:hidden;flex:1;">
@@ -2910,13 +3040,23 @@ function closeLegendOutside(e) {
 function switchTopNav(tab, btn) {
   // Hide all sections
   document.querySelectorAll('.top-nav-section').forEach(s => s.style.display = 'none');
-  // Deactivate all nav buttons
+  // Deactivate all nav buttons (top + mobile bottom)
   document.querySelectorAll('.top-nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
   // Show selected section
   const section = document.getElementById('section-' + tab);
   if (section) section.style.display = 'block';
-  // Activate clicked button
+  // Activate clicked button (top nav)
   if (btn) btn.classList.add('active');
+  // Also activate matching top nav btn if called from mobile
+  if (!btn) {
+    document.querySelectorAll(`.top-nav-btn`).forEach(b => {
+      if (b.getAttribute('onclick')?.includes(`'${tab}'`)) b.classList.add('active');
+    });
+  }
+  // Always sync mobile bottom nav
+  const mobileBtn = document.getElementById('mnav-' + tab);
+  if (mobileBtn) mobileBtn.classList.add('active');
 
   // Mirror venue/pitching tables from existing rendered data if needed
   if (tab === 'venues') {
