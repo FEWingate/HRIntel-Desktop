@@ -2704,6 +2704,7 @@ async function renderGames(alerts, noHRAlerts) {
   // H2H for alerts
   const h2hMap = {};
   for (const a of alerts) {
+    if (!a.hitter?.id || !a.pitcher?.id) continue;
     const key = `${a.game.gamePk}-${a.hitter.id}-${a.pitcher.id}`;
     if (!h2hMap[key]) h2hMap[key] = fetchH2H(a.pitcher.id, a.hitter.id);
   }
@@ -2713,6 +2714,7 @@ async function renderGames(alerts, noHRAlerts) {
 
   const gameAlertsMap = {};
   for (const a of alerts) {
+    if (!a.game?.gamePk) continue;
     if (!gameAlertsMap[a.game.gamePk]) gameAlertsMap[a.game.gamePk] = [];
     gameAlertsMap[a.game.gamePk].push(a);
   }
