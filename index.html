@@ -1139,6 +1139,7 @@
     padding: 6px 0 max(6px, env(safe-area-inset-bottom));
     display: none;
   }
+  .sidebar-mobile-header { display: none; } /* hidden on desktop */
   .mobile-bottom-nav-inner {
     display: flex; align-items: center; justify-content: space-around;
   }
@@ -1173,11 +1174,19 @@
     .hr-ticker-label { font-size: 8px; padding: 0 6px; }
     .hr-ticker-item { font-size: 11px; padding: 0 10px; }
 
-    /* Sidebar hidden by default on mobile — hamburger opens it */
-    .sidebar { position: fixed; left: -280px; top: 0; height: 100vh; z-index: 50; transition: left 0.3s ease; width: 280px; }
+    /* Sidebar search — bigger and easier to tap on mobile */
+    .sidebar-search { font-size: 16px !important; padding: 14px 16px !important; border-radius: 10px !important; }
+    .sidebar-section { padding: 12px 16px !important; }
+    .sidebar-section-title { font-size: 11px !important; margin-bottom: 8px !important; }
+    .search-result-item { padding: 12px 10px !important; font-size: 13px !important; }
+    .search-results { max-height: 60vh !important; }
+    .sidebar-mlb-btn { padding: 14px 12px !important; }
+    .sidebar-mlb-label { font-size: 20px !important; }
+    .sidebar { position: fixed; left: -100vw; top: 0; height: 100vh; z-index: 50; transition: left 0.3s ease; width: 100vw !important; }
     .sidebar.open { left: 0; }
     .sidebar-toggle { display: flex !important; }
     .main-content { width: 100%; padding-bottom: 70px; /* space for bottom nav */ }
+    .sidebar-mobile-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
 
     /* Game cards — single column */
     .games-grid { grid-template-columns: 1fr !important; gap: 10px; padding: 10px; }
@@ -1573,6 +1582,12 @@
 
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
+
+      <!-- Mobile close button -->
+      <div class="sidebar-mobile-header">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;">HR <span style="color:var(--accent-blue);">INTEL</span></span>
+        <button onclick="toggleSidebar()" style="background:none;border:1px solid var(--border2);color:var(--text-mid);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;">✕ Close</button>
+      </div>
 
       <!-- SEARCH -->
       <div class="sidebar-section">
