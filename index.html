@@ -24,6 +24,139 @@
     --triple-glow: 0 0 24px rgba(255,214,10,0.15), 0 0 48px rgba(230,57,70,0.08);
   }
 
+  /* ── LIGHT MODE ── */
+  body.light-mode {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #e8eaed;
+    --border: #d1d5db;
+    --border2: #c4c8d0;
+    --text: #0f1117;
+    --text-dim: #9ca3af;
+    --text-mid: #4b5563;
+    --triple-glow: 0 0 24px rgba(180,130,0,0.15), 0 0 48px rgba(180,57,70,0.08);
+    --accent-red: #c0222e;
+    --accent-orange: #d97706;
+    --accent-gold: #b45309;
+    --accent-blue: #0369a1;
+    --accent-purple: #7c3aed;
+    --accent-green: #16a34a;
+  }
+
+  body.light-mode header {
+    background: rgba(240,242,245,0.97);
+    border-bottom-color: var(--border);
+  }
+  body.light-mode .hr-ticker-wrap {
+    background: rgba(180,130,0,0.06);
+    border-bottom-color: rgba(180,130,0,0.2);
+  }
+  body.light-mode .hr-ticker-label {
+    background: rgba(180,130,0,0.12);
+    border-right-color: rgba(180,130,0,0.2);
+  }
+  body.light-mode .game-card {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  body.light-mode .game-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+
+  /* ── LIGHT MODE LEADERBOARD FIXES ── */
+  /* Row highlights — stronger tint on white background */
+  body.light-mode .stat-table tbody tr.hl-blue { background: rgba(3,105,161,0.08);  border-left-color: var(--accent-blue); }
+  body.light-mode .stat-table tbody tr.hl-red  { background: rgba(192,34,46,0.08);  border-left-color: var(--accent-red); }
+  body.light-mode .stat-table tbody tr.hl-gold { background: rgba(180,83,9,0.08);   border-left-color: var(--accent-gold); }
+  body.light-mode .stat-table tbody tr.hl-top-venue    { background: rgba(180,83,9,0.08);   border-left-color: var(--accent-gold); }
+  body.light-mode .stat-table tbody tr.hl-bottom-venue { background: rgba(124,58,237,0.08); border-left-color: var(--accent-purple); }
+
+  /* Row hover */
+  body.light-mode .stat-table tbody tr:hover { background: rgba(0,0,0,0.03); }
+
+  /* Mini bars — solid colors, no transparency needed */
+  body.light-mode .mini-bar { background: var(--border); }
+  body.light-mode .mini-bar-fill.blue   { background: var(--accent-blue); }
+  body.light-mode .mini-bar-fill.red    { background: var(--accent-red); }
+  body.light-mode .mini-bar-fill.gold   { background: var(--accent-gold); }
+  body.light-mode .mini-bar-fill.purple { background: var(--accent-purple); }
+
+  /* Panel headers */
+  body.light-mode .panel { box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  body.light-mode .panel-header { background: var(--surface); }
+  body.light-mode .stat-table thead tr { background: var(--surface2); }
+  body.light-mode .stat-table thead th { color: var(--text-mid); }
+
+  /* Venue table */
+  body.light-mode .venue-row:hover { background: rgba(192,34,46,0.05); }
+  body.light-mode .venue-row.top10 { background: rgba(180,83,9,0.06); }
+  body.light-mode .col-header { background: rgba(192,34,46,0.06); color: var(--accent-red); }
+
+  /* Team HR leaderboard inline styles — override green */
+  body.light-mode .stat-table tbody tr td[style*="accent-green"] { color: #16a34a !important; }
+
+  /* Handedness badges */
+  body.light-mode .hand-badge.L { background: rgba(192,34,46,0.12); color: var(--accent-red); border-color: rgba(192,34,46,0.35); }
+  body.light-mode .hand-badge.R { background: rgba(3,105,161,0.12); color: var(--accent-blue); border-color: rgba(3,105,161,0.35); }
+  body.light-mode .hand-badge.S { background: rgba(180,83,9,0.12);  color: var(--accent-gold); border-color: rgba(180,83,9,0.35); }
+
+  /* Alert dot */
+  body.light-mode .stat-table tbody tr.hl-top-venue {
+    animation: rowIn 0.3s ease forwards, venueTopPulseLight 2.5s ease-in-out 0.3s infinite;
+  }
+  body.light-mode .stat-table tbody tr.hl-bottom-venue {
+    animation: rowIn 0.3s ease forwards, venueBottomPulseLight 2.5s ease-in-out 0.3s infinite;
+  }
+  @keyframes venueTopPulseLight {
+    0%,100%{ background: rgba(180,83,9,0.05); border-left-color: var(--accent-gold); }
+    50%{ background: rgba(180,83,9,0.12); border-left-color: var(--accent-gold); }
+  }
+  @keyframes venueBottomPulseLight {
+    0%,100%{ background: rgba(124,58,237,0.05); border-left-color: var(--accent-purple); }
+    50%{ background: rgba(124,58,237,0.12); border-left-color: var(--accent-purple); }
+  }
+
+  /* ── LIGHT MODE THREATS + ALERTS ── */
+  body.light-mode .threats-tab-bar { background: var(--surface2); border-color: var(--border); }
+  body.light-mode .threats-tab-btn { color: var(--text-mid); }
+  body.light-mode .threats-tab-btn.active-hr   { background: var(--accent-gold); color: #fff; }
+  body.light-mode .threats-tab-btn.active-nohr { background: #7c3aed; color: #fff; }
+
+  body.light-mode .alert-triple {
+    background: linear-gradient(135deg, rgba(180,83,9,0.08), rgba(192,34,46,0.06));
+    border-color: var(--accent-gold);
+  }
+  body.light-mode .alert-triple::before { background: var(--accent-gold); color: #fff; }
+  body.light-mode .alert-double { background: rgba(217,119,6,0.06); border-color: rgba(217,119,6,0.4); }
+  body.light-mode .alert-double::before { background: var(--accent-orange); color: #fff; }
+  body.light-mode .alert-nohr-triple {
+    background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.05));
+    border-color: #7c3aed;
+    box-shadow: 0 0 20px rgba(124,58,237,0.1);
+  }
+  body.light-mode .alert-nohr-triple::before { background: #7c3aed; color: #fff; }
+  body.light-mode .alert-nohr-double { background: rgba(124,58,237,0.05); border-color: rgba(124,58,237,0.4); }
+  body.light-mode .alert-nohr-double::before { background: #9d4edd; color: #fff; }
+
+  body.light-mode .tag-hr      { background: rgba(3,105,161,0.1);   color: var(--accent-blue);   border-color: rgba(3,105,161,0.3); }
+  body.light-mode .tag-pitcher { background: rgba(192,34,46,0.1);   color: var(--accent-red);    border-color: rgba(192,34,46,0.3); }
+  body.light-mode .tag-venue   { background: rgba(180,83,9,0.1);    color: var(--accent-gold);   border-color: rgba(180,83,9,0.3); }
+  body.light-mode .tag-nohr-venue   { background: rgba(124,58,237,0.1); color: #7c3aed; border-color: rgba(124,58,237,0.3); }
+  body.light-mode .tag-nohr-pitcher { background: rgba(124,58,237,0.1); color: #7c3aed; border-color: rgba(124,58,237,0.3); }
+  body.light-mode .tag-nohr-team    { background: rgba(124,58,237,0.08); color: #7c3aed; border-color: rgba(124,58,237,0.2); }
+  body.light-mode .landing-screen { background: #f0f2f5; }
+  body.light-mode .modal-overlay  { background: rgba(15,17,23,0.6); }
+
+  /* ── THEME TOGGLE BUTTON ── */
+  .theme-toggle {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text-mid); cursor: pointer;
+    font-size: 15px; transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .theme-toggle:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: var(--surface); }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -451,24 +584,190 @@
     color: var(--text-dim); letter-spacing: 2px;
   }
 
-  .game-card-header { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
-  .game-teams { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; }
-  .game-teams .away { color: var(--text-mid); }
-  .game-teams .home { color: var(--text); }
-  .game-teams .at { color: var(--text-dim); font-size: 14px; }
-  .game-meta { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 3px; letter-spacing: 0.5px; }
-  .threat-badge { display: inline-block; font-family: 'Bebas Neue', sans-serif; font-size: 11px; letter-spacing: 1px; padding: 2px 8px; border-radius: 3px; margin-top: 5px; }
-  .threat-badge.triple { background: var(--accent-gold); color: #000; }
-  .threat-badge.double { background: var(--accent-orange); color: #000; }
+  /* ── GAME CARD PREMIUM REDESIGN ── */
+  .game-card-header {
+    padding: 0;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
 
-  .game-card-body { padding: 10px 14px; }
-  .team-section { margin-bottom: 8px; }
-  .team-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
+  /* Top color bar — team accent stripe */
+  .card-top-bar {
+    height: 3px;
+    background: linear-gradient(90deg, var(--away-color, var(--border2)) 0%, var(--away-color, var(--border2)) 50%, var(--home-color, var(--border2)) 50%, var(--home-color, var(--border2)) 100%);
+  }
 
-  .hitter-row { display: flex; align-items: center; justify-content: space-between; padding: 3px 0; }
-  .hitter-row-name { font-size: 12px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 5px; }
-  .top25-badge { font-family: 'IBM Plex Mono', monospace; font-size: 9px; padding: 1px 5px; background: rgba(76,201,240,0.15); color: var(--accent-blue); border: 1px solid rgba(76,201,240,0.3); border-radius: 2px; }
-  .hitter-row-hr { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: var(--accent-blue); }
+  .card-header-inner {
+    padding: 12px 14px 10px;
+    background: rgba(255,255,255,0.015);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Team matchup row */
+  .card-matchup-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .game-teams {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    line-height: 1;
+  }
+  .game-teams .away {
+    color: var(--away-color, var(--text-mid));
+    text-shadow: 0 0 20px var(--away-glow, transparent);
+  }
+  .game-teams .home {
+    color: var(--home-color, var(--text));
+    text-shadow: 0 0 20px var(--home-glow, transparent);
+  }
+  .game-teams .at {
+    color: var(--text-dim);
+    font-size: 13px;
+    letter-spacing: 1px;
+    margin: 0 -2px;
+  }
+
+  /* Meta row — venue + time */
+  .card-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .game-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-time-chip {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Threat badges — editorial label style */
+  .card-badge-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .threat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 3px 9px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .threat-badge.triple {
+    background: rgba(255,214,10,0.12);
+    color: var(--accent-gold);
+    border: 1px solid rgba(255,214,10,0.4);
+    box-shadow: 0 0 10px rgba(255,214,10,0.1);
+  }
+  .threat-badge.double {
+    background: rgba(245,158,11,0.1);
+    color: var(--accent-orange);
+    border: 1px solid rgba(245,158,11,0.35);
+  }
+  .threat-badge.nohr-triple {
+    background: rgba(223,0,255,0.1);
+    color: #df00ff;
+    border: 1px solid rgba(223,0,255,0.4);
+  }
+  .threat-badge.nohr-double {
+    background: rgba(199,125,255,0.08);
+    color: #c77dff;
+    border: 1px solid rgba(199,125,255,0.35);
+  }
+
+  /* Card body */
+  .game-card-body { padding: 10px 14px 12px; }
+
+  /* Team section with left accent bar */
+  .team-section {
+    margin-bottom: 10px;
+    padding-left: 10px;
+    border-left: 2px solid var(--section-color, var(--border2));
+    transition: border-color 0.2s;
+  }
+  .team-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--section-color, var(--text-dim));
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    font-weight: 700;
+    opacity: 0.85;
+  }
+
+  /* Hitter rows */
+  .hitter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 0;
+    gap: 6px;
+  }
+  .hitter-row-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .top25-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8px;
+    padding: 1px 5px;
+    background: rgba(76,201,240,0.1);
+    color: var(--accent-blue);
+    border: 1px solid rgba(76,201,240,0.25);
+    border-radius: 2px;
+    letter-spacing: 0.5px;
+  }
+  .hitter-row-hr {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-mid);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 1px 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 
   /* Pitcher handedness badge */
   .hand-badge {
@@ -480,19 +779,76 @@
   .hand-badge.R { background: rgba(76,201,240,0.15); color: var(--accent-blue); border: 1px solid rgba(76,201,240,0.3); }
   .hand-badge.S { background: rgba(255,214,10,0.12); color: var(--accent-gold); border: 1px solid rgba(255,214,10,0.3); }
 
-  .pitcher-matchup { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
-  .pitcher-line { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; gap: 6px; }
+  .pitcher-matchup {
+    border-top: 1px solid var(--border);
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .pitcher-matchup-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 7px;
+    font-weight: 700;
+  }
+  .pitcher-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 8px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    margin-bottom: 5px;
+    gap: 6px;
+    transition: background 0.15s;
+  }
+  .pitcher-line:last-child { margin-bottom: 0; }
+  .pitcher-line:hover { background: rgba(255,255,255,0.04); }
   .pitcher-line-left { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
   .pitcher-name-label { font-size: 11px; color: var(--text-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pitcher-name-label span { font-weight: 600; color: var(--text); }
   .pitcher-badges { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
-  .h2h-section { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
-  .h2h-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 5px; }
-  .h2h-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 11px; }
-  .h2h-names { color: var(--text-mid); flex: 1; }
+  .h2h-section {
+    border-top: 1px solid var(--border);
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .h2h-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--accent-purple);
+    text-transform: uppercase;
+    margin-bottom: 7px;
+    font-weight: 700;
+    opacity: 0.8;
+  }
+  .h2h-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 11px;
+    border-bottom: 1px solid rgba(30,37,48,0.5);
+  }
+  .h2h-row:last-child { border-bottom: none; }
+  .h2h-names { color: var(--text-mid); flex: 1; line-height: 1.4; }
   .h2h-names strong { color: var(--text); }
-  .h2h-stats { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--accent-purple); white-space: nowrap; margin-left: 8px; }
+  .h2h-stats {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--accent-purple);
+    white-space: nowrap;
+    margin-left: 8px;
+    background: rgba(167,139,250,0.08);
+    border: 1px solid rgba(167,139,250,0.2);
+    border-radius: 3px;
+    padding: 1px 6px;
+  }
 
   /* Live score display */
   .live-score {
@@ -623,7 +979,7 @@
   @keyframes fillBar { from{width:0} }
   .alert-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-gold); margin-left: 5px; vertical-align: middle; animation: pulse 2s ease-in-out infinite; }
 
-  .scroll-panel { max-height: 800px; overflow-y: auto; }
+  .scroll-panel { max-height: none; overflow-y: visible; }
   .scroll-panel::-webkit-scrollbar { width: 3px; }
   .scroll-panel::-webkit-scrollbar-track { background: transparent; }
   .scroll-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -733,13 +1089,13 @@
 
   /* Pulsing threat badges on game cards */
   @keyframes threatPulse {
-    0%,100%{ opacity:1; transform:scale(1); }
-    50%{ opacity:0.75; transform:scale(1.04); }
+    0%,100%{ opacity:1; }
+    50%{ opacity:0.7; }
   }
-  .threat-badge.triple { background: var(--accent-gold); color: #000; animation: threatPulse 2s ease-in-out infinite; }
-  .threat-badge.double { background: var(--accent-orange); color: #000; animation: threatPulse 2.5s ease-in-out infinite; }
-  .threat-badge.nohr-triple { background: #df00ff; color: #000; animation: threatPulse 2s ease-in-out infinite; }
-  .threat-badge.nohr-double { background: #c77dff; color: #000; animation: threatPulse 2.5s ease-in-out infinite; }
+  .threat-badge.triple  { animation: threatPulse 2s ease-in-out infinite; }
+  .threat-badge.double  { animation: threatPulse 2.5s ease-in-out infinite; }
+  .threat-badge.nohr-triple { animation: threatPulse 2s ease-in-out infinite; }
+  .threat-badge.nohr-double { animation: threatPulse 2.5s ease-in-out infinite; }
 
   /* ── PLAYER HEADSHOT ── */
   .player-headshot-wrap {
@@ -1380,6 +1736,7 @@
     <div class="header-right">
       <span class="last-updated" id="lastUpdated">—</span>
       <span class="live-dot loading" id="liveStatus">LOADING</span>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
       <button class="refresh-btn" id="refreshBtn" onclick="initDashboard()">↻ Refresh</button>
     </div>
   </header>
@@ -1722,7 +2079,7 @@
         <div><div class="panel-title gold">All 30 Venues — HR</div><div class="panel-subtitle">2026 · 🟡 Top 10 · 🟣 Bottom 10</div></div>
         <div class="panel-count">30</div>
       </div>
-      <div class="scroll-panel" style="max-height:600px;">
+      <div class="scroll-panel">
         <table class="stat-table">
           <thead><tr><th>#</th><th>Venue</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
           <tbody id="all-venues-body-v2"></tbody>
@@ -1734,7 +2091,7 @@
         <div><div class="panel-title" style="color:var(--accent-green)">All 30 Teams — HR</div><div class="panel-subtitle">2026 · Season To Date</div></div>
         <div class="panel-count">30</div>
       </div>
-      <div class="scroll-panel" style="max-height:600px;">
+      <div class="scroll-panel">
         <table class="stat-table">
           <thead><tr><th>#</th><th>Team</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
           <tbody id="team-hr-body-v2"></tbody>
@@ -1755,7 +2112,7 @@
         <div><div class="panel-title red">Top 25 HR's Allowed</div><div class="panel-subtitle">2026 · Pitchers · Season To Date</div></div>
         <div class="panel-count">25</div>
       </div>
-      <div class="scroll-panel" style="max-height:600px;">
+      <div class="scroll-panel">
         <table class="stat-table">
           <thead><tr><th>#</th><th colspan="2">Pitcher</th><th class="right">HR</th><th class="bar-cell"></th></tr></thead>
           <tbody id="pitchers-body-v2"></tbody>
@@ -1767,7 +2124,7 @@
         <div><div class="panel-title" style="color:var(--accent-purple)">Top 25 Strikeout Pitchers</div><div class="panel-subtitle">2026 · Season To Date</div></div>
         <div class="panel-count">25</div>
       </div>
-      <div class="scroll-panel" style="max-height:600px;">
+      <div class="scroll-panel">
         <table class="stat-table">
           <thead><tr><th>#</th><th colspan="2">Pitcher</th><th class="right">GP</th><th class="right">K</th><th class="right">K/G</th><th class="bar-cell"></th></tr></thead>
           <tbody id="ko-body-v2"></tbody>
@@ -2799,27 +3156,50 @@ async function renderGames(alerts, noHRAlerts) {
       </div>`;
     }).join('');
 
-    return `<div class="game-card ${threat?threat+'-game':noHRThreatMap[game.gamePk]?noHRThreatMap[game.gamePk]+'-game':''}" onclick="openGameModal(${game.gamePk})">
+    const awayColor = teamColor(game.away.team) || '#4b5563';
+    const homeColor = teamColor(game.home.team) || '#4b5563';
+    const awayGlow  = awayColor + '40';
+    const homeGlow  = homeColor + '40';
+
+    return `<div class="game-card ${threat?threat+'-game':noHRThreatMap[game.gamePk]?noHRThreatMap[game.gamePk]+'-game':''}"
+      style="--away-color:${awayColor};--home-color:${homeColor};--away-glow:${awayGlow};--home-glow:${homeGlow};"
+      onclick="openGameModal(${game.gamePk})">
       <div class="game-card-header">
-        <div class="game-teams"><span class="away">${game.away.team}</span><span class="at">@</span><span class="home">${game.home.team}</span></div>
-        <div class="game-meta">${game.time} · <span onclick="event.stopPropagation();openTeamModal('${game.home.team}','${(game.home.name||game.home.team).replace(/'/g,"\\'")}');return false;" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;" title="View ${game.home.name||game.home.team} info">${game.venue}</span>${isTop10V?' ⭐':''}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
-          ${threat?`<div class="threat-badge ${threat}">${threat==='triple'?'⚡ TRIPLE THREAT':'🔶 DOUBLE THREAT'}</div>`:''}
-          ${noHRThreatMap[game.gamePk]?`<div class="threat-badge ${noHRThreatMap[game.gamePk]}">${noHRThreatMap[game.gamePk]==='nohr-triple'?'⚡ NO HR TRIPLE':'🛡️ NO HR DOUBLE'}</div>`:''}
+        <div class="card-top-bar"></div>
+        <div class="card-header-inner">
+          <div class="card-matchup-row">
+            <div class="game-teams">
+              <span class="away">${game.away.team}</span>
+              <span class="at">@</span>
+              <span class="home">${game.home.team}</span>
+            </div>
+            <span class="card-time-chip">${game.time}</span>
+          </div>
+          <div class="card-meta-row">
+            <div class="game-meta" onclick="event.stopPropagation();openTeamModal('${game.home.team}','${(game.home.name||game.home.team).replace(/'/g,"\\'")}');return false;" style="cursor:pointer;" title="View ${game.home.name||game.home.team} info">
+              📍 ${game.venue}${isTop10V?' ⭐':''}
+            </div>
+          </div>
+          ${(threat || noHRThreatMap[game.gamePk]) ? `
+          <div class="card-badge-row">
+            ${threat?`<div class="threat-badge ${threat}">${threat==='triple'?'⚡ Triple Threat':'🔶 Double Threat'}</div>`:''}
+            ${noHRThreatMap[game.gamePk]?`<div class="threat-badge ${noHRThreatMap[game.gamePk]}">${noHRThreatMap[game.gamePk]==='nohr-triple'?'⚡ No HR Triple':'🛡 No HR Double'}</div>`:''}
+          </div>` : ''}
         </div>
       </div>
       ${hrpsHTML}
       ${liveScoreHTML(game)}
       <div class="game-card-body">
-        <div class="team-section">
+        <div class="team-section" style="--section-color:${awayColor};">
           <div class="team-label">${game.away.team} — Top HR Hitters</div>
           ${leaderRows(leaders?.awayLeaders, game.away.team)}
         </div>
-        <div class="team-section">
+        <div class="team-section" style="--section-color:${homeColor};">
           <div class="team-label">${game.home.team} — Top HR Hitters</div>
           ${leaderRows(leaders?.homeLeaders, game.home.team)}
         </div>
         <div class="pitcher-matchup">
+          <div class="pitcher-matchup-label">⚾ Starting Pitchers</div>
           ${pitcherLine('away')}
           ${pitcherLine('home')}
         </div>
@@ -4661,6 +5041,27 @@ setInterval(async () => {
 }, 60000);
 
 // Auto-refresh full dashboard every 4 hours
+// ── THEME TOGGLE ─────────────────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
+  try { localStorage.setItem('hrintel-theme', isLight ? 'light' : 'dark'); } catch(e) {}
+}
+// Apply saved theme on load
+(function() {
+  try {
+    const saved = localStorage.getItem('hrintel-theme');
+    if (saved === 'light') {
+      document.body.classList.add('light-mode');
+      // Toggle button text set after DOM ready
+      document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('themeToggle');
+        if (btn) btn.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
 if ('Notification' in window && Notification.permission==='default') Notification.requestPermission();
 initDashboard();
 </script>
