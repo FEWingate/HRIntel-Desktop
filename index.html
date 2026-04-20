@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HR Intel — MLB 2026 Live</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #080a0e;
@@ -288,10 +288,10 @@
   /* ── TOP NAV PILLS ── */
   .top-nav { display: flex; gap: 2px; flex: 1; justify-content: center; }
   .top-nav-btn {
-    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
-    padding: 6px 18px; border-radius: 20px; border: 1px solid transparent;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600;
+    padding: 6px 20px; border-radius: 20px; border: 1px solid transparent;
     background: transparent; color: var(--text-mid); cursor: pointer;
-    transition: all 0.15s; letter-spacing: 0.5px;
+    transition: all 0.15s; letter-spacing: 1px; text-transform: uppercase;
   }
   .top-nav-btn:hover { background: var(--surface2); color: var(--text); }
   .top-nav-btn.active { background: var(--surface2); color: var(--text); border-color: var(--border2); }
@@ -592,11 +592,8 @@
     position: relative;
   }
 
-  /* Top color bar — team accent stripe */
-  .card-top-bar {
-    height: 3px;
-    background: linear-gradient(90deg, var(--away-color, var(--border2)) 0%, var(--away-color, var(--border2)) 50%, var(--home-color, var(--border2)) 50%, var(--home-color, var(--border2)) 100%);
-  }
+  /* Top color bar removed */
+  .card-top-bar { display: none; }
 
   .card-header-inner {
     padding: 12px 14px 10px;
@@ -1229,41 +1226,104 @@
   }
   .sched-today-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
 
-  /* Schedule game cards */
+  /* Schedule game cards — premium redesign */
   .sched-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
   .sched-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color 0.15s;
+    border-radius: 12px; overflow: hidden; cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
   }
-  .sched-card:hover { border-color: var(--border2); }
-  .sched-card.sched-final { border-left: 3px solid var(--accent-red); }
-  .sched-card.sched-live  { border-left: 3px solid var(--accent-green); }
-  .sched-card.sched-sched { border-left: 3px solid var(--border2); }
+  .sched-card:hover { border-color: var(--border2); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+  .sched-card.sched-final { border-color: var(--border); }
+  .sched-card.sched-live  { border-color: rgba(74,222,128,0.5); box-shadow: 0 0 12px rgba(74,222,128,0.1); }
+  .sched-card.sched-sched { border-color: var(--border); }
+
   .sched-card-header {
-    padding: 8px 12px; background: rgba(255,255,255,0.02);
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.02);
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
   }
-  .sched-status { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; }
+  .sched-status {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
   .sched-status.final { color: var(--accent-red); }
   .sched-status.live  { color: var(--accent-green); }
   .sched-status.sched { color: var(--text-dim); }
-  .sched-venue { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); }
-  .sched-card-body { padding: 10px 12px; }
-  .sched-team-row {
-    display: grid; grid-template-columns: 1fr auto auto auto;
-    align-items: center; gap: 8px; padding: 4px 0;
+  .sched-venue {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-align: right; flex: 1;
   }
-  .sched-team-row:first-of-type { border-bottom: 1px solid rgba(26,31,46,0.5); padding-bottom: 6px; margin-bottom: 2px; }
-  .sched-team-name { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  .sched-card-body { padding: 10px 12px; }
+
+  .sched-team-row {
+    display: flex; align-items: center;
+    gap: 8px; padding: 5px 0;
+  }
+  .sched-team-bar {
+    width: 4px; height: 32px; border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .sched-team-abbr {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 1px;
+    min-width: 42px; flex-shrink: 0;
+    line-height: 1;
+  }
+  .sched-team-name {
+    font-size: 12px; font-weight: 600;
+    color: var(--text-mid); flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .sched-team-abbr-sm { font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700; }
-  .sched-score { font-family: 'Bebas Neue', sans-serif; font-size: 22px; min-width: 24px; text-align: center; }
+  .sched-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px; line-height: 1;
+    min-width: 28px; text-align: right; flex-shrink: 0;
+  }
   .sched-score.winner { color: var(--text); }
   .sched-score.loser  { color: var(--text-dim); }
-  .sched-rhe { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); min-width: 40px; text-align: right; }
-  .sched-pitchers { padding: 6px 12px 10px; border-top: 1px solid var(--border); display: flex; gap: 12px; flex-wrap: wrap; }
-  .sched-pitcher { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); }
-  .sched-pitcher span { color: var(--text-mid); }
+  .sched-rhe {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: var(--text-mid);
+    min-width: 44px; text-align: right; flex-shrink: 0;
+  }
+  .sched-rhe-header {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8px; color: var(--text-dim);
+    min-width: 32px; text-align: right; flex-shrink: 0;
+    letter-spacing: 1px;
+  }
+
+  /* Pitcher decisions footer */
+  .sched-pitchers {
+    padding: 7px 12px 10px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .sched-pitcher {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .sched-pitcher span { color: var(--text-mid); font-weight: 600; }
+
+  /* Game time chip for scheduled games */
+  .sched-time-chip {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; letter-spacing: 1px;
+    color: var(--accent-blue);
+    background: rgba(76,201,240,0.08);
+    border: 1px solid rgba(76,201,240,0.2);
+    border-radius: 4px; padding: 2px 8px;
+    white-space: nowrap;
+  }
   .mlb-tab-btn {
     font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
     padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border2);
@@ -3667,7 +3727,10 @@ function formatScheduleDate(d) {
 }
 
 function dateKey(d) {
-  return d.toISOString().slice(0,10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
 }
 
 async function loadScheduleForDate(d) {
@@ -3690,7 +3753,7 @@ async function loadScheduleForDate(d) {
 
   try {
     const dateStr = key;
-    const data = await fetchJSON(`${BASE}/schedule?sportId=1&date=${dateStr}&hydrate=linescore,boxscore,probablePitcher,decisions`);
+    const data = await fetchJSON(`${BASE}/schedule?sportId=1&date=${dateStr}&hydrate=linescore,boxscore,probablePitcher,decisions,team`);
     scheduleCache[key] = data;
     renderScheduleGames(data, isToday);
   } catch(e) {
@@ -3717,12 +3780,13 @@ function renderScheduleGames(data, isToday) {
     const home = g.teams?.home;
     const awayName  = away?.team?.teamName || away?.team?.name || '—';
     const homeName  = home?.team?.teamName || home?.team?.name || '—';
-    const awayAbbr  = away?.team?.abbreviation || '—';
-    const homeAbbr  = home?.team?.abbreviation || '—';
+    // abbreviation may not be in schedule hydration — derive from TEAM_COLORS keys by matching name
+    const awayAbbr  = away?.team?.abbreviation || Object.keys(TEAM_COLORS).find(k => awayName.includes(k)) || away?.team?.id?.toString()?.slice(-3) || '—';
+    const homeAbbr  = home?.team?.abbreviation || Object.keys(TEAM_COLORS).find(k => homeName.includes(k)) || home?.team?.id?.toString()?.slice(-3) || '—';
     const awayScore = away?.score ?? (isScheduled ? '' : '0');
     const homeScore = home?.score ?? (isScheduled ? '' : '0');
-    const awayWon   = isFinal && awayScore > homeScore;
-    const homeWon   = isFinal && homeScore > awayScore;
+    const awayWon   = isFinal && Number(awayScore) > Number(homeScore);
+    const homeWon   = isFinal && Number(homeScore) > Number(awayScore);
 
     // R H E
     const awayLine  = g.linescore?.teams?.away;
@@ -3751,31 +3815,32 @@ function renderScheduleGames(data, isToday) {
 
     return `<div class="sched-card ${cardClass}" onclick="openScheduleGame(${g.gamePk})">
       <div class="sched-card-header">
-        <span class="sched-status ${statusClass}">${statusText}</span>
-        <span class="sched-venue">${g.venue?.name||''}</span>
+        ${isScheduled
+          ? `<span class="sched-time-chip">🕐 ${gameTime}</span>`
+          : `<span class="sched-status ${statusClass}">${statusText}</span>`
+        }
+        <span class="sched-venue">📍 ${g.venue?.name||''}</span>
       </div>
       <div class="sched-card-body">
         <div class="sched-team-row">
-          <span class="sched-team-name">${awayName}
-            <span class="sched-team-abbr-sm" style="color:${tc_away};"> ${awayAbbr}</span>
-          </span>
-          ${isFinal ? `<span class="sched-rhe" style="font-size:8px;color:var(--text-dim);">R&nbsp;&nbsp;H&nbsp;&nbsp;E</span>` : ''}
-          ${isFinal ? `<span class="sched-rhe">${awayRHE}</span>` : ''}
-          <span class="sched-score ${awayWon?'winner':'loser'}">${awayScore}</span>
+          <div class="sched-team-bar" style="background:${tc_away};"></div>
+          <span class="sched-team-abbr" style="color:${tc_away};">${awayAbbr}</span>
+          <span class="sched-team-name" style="color:${tc_away};">${awayName}</span>
+          ${isFinal ? `<span class="sched-rhe-header">R&nbsp;H&nbsp;E</span><span class="sched-rhe">${awayRHE}</span>` : ''}
+          <span class="sched-score ${awayWon?'winner':'loser'}" style="color:${awayWon?tc_away:'var(--text-dim)'};">${awayScore}</span>
         </div>
-        <div class="sched-team-row">
-          <span class="sched-team-name">${homeName}
-            <span class="sched-team-abbr-sm" style="color:${tc_home};"> ${homeAbbr}</span>
-          </span>
-          ${isFinal ? `<span class="sched-rhe" style="font-size:8px;color:var(--text-dim);">R&nbsp;&nbsp;H&nbsp;&nbsp;E</span>` : ''}
-          ${isFinal ? `<span class="sched-rhe">${homeRHE}</span>` : ''}
-          <span class="sched-score ${homeWon?'winner':'loser'}">${homeScore}</span>
+        <div class="sched-team-row" style="margin-top:6px;">
+          <div class="sched-team-bar" style="background:${tc_home};"></div>
+          <span class="sched-team-abbr" style="color:${tc_home};">${homeAbbr}</span>
+          <span class="sched-team-name" style="color:${tc_home};">${homeName}</span>
+          ${isFinal ? `<span class="sched-rhe-header">R&nbsp;H&nbsp;E</span><span class="sched-rhe">${homeRHE}</span>` : ''}
+          <span class="sched-score ${homeWon?'winner':'loser'}" style="color:${homeWon?tc_home:'var(--text-dim)'};">${homeScore}</span>
         </div>
       </div>
       ${(wpLine||lpLine) ? `<div class="sched-pitchers">
-        ${wpLine ? `<span class="sched-pitcher"><span>${wpLine}</span></span>` : ''}
-        ${lpLine ? `<span class="sched-pitcher"><span>${lpLine}</span></span>` : ''}
-        ${svLine ? `<span class="sched-pitcher"><span>${svLine}</span></span>` : ''}
+        ${wpLine ? `<span class="sched-pitcher">W <span>${wp.fullName}</span></span>` : ''}
+        ${lpLine ? `<span class="sched-pitcher">L <span>${lp.fullName}</span></span>` : ''}
+        ${svLine ? `<span class="sched-pitcher">S <span>${sv.fullName}</span></span>` : ''}
       </div>` : ''}
     </div>`;
   }).join('');
@@ -4102,7 +4167,7 @@ function renderTeamModal(abbr, { venueData, rosterData, teamStatsData, standings
         const lastName  = name.split(' ').slice(1).join(' ');
         return `<div class="leaders-player-row" onclick="openPlayerModal(${pid},'${name.replace(/'/g,"\\'")}','${abbr}')">
           <span class="leaders-rank">${i+1}</span>
-          <span class="leaders-name" title="${name}">${lastName}, ${firstName}</span>
+          <span class="leaders-name" title="${name}">${name}</span>
           <span class="leaders-val" style="${color?'color:'+color+';':''}">${val}</span>
         </div>`;
       }).join('');
