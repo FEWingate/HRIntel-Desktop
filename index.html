@@ -1094,7 +1094,41 @@
   .threat-badge.nohr-triple { animation: threatPulse 2s ease-in-out infinite; }
   .threat-badge.nohr-double { animation: threatPulse 2.5s ease-in-out infinite; }
 
-  /* ── PLAYER GAME LOG ── */
+  /* ── PLAYER MODAL SPLIT SCREEN ── */
+  #playerModal { transition: max-width 0.3s ease; max-width: 560px !important; }
+  #playerModal.split-mode { max-width: 960px !important; }
+
+  .player-modal-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 0;
+  }
+  .player-modal-left {
+    overflow-y: auto; max-height: calc(88vh - 60px);
+    border-right: 1px solid var(--border);
+  }
+  .player-modal-left::-webkit-scrollbar { width: 3px; }
+  .player-modal-left::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .player-modal-right {
+    overflow-y: auto; max-height: calc(88vh - 60px);
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.01);
+  }
+  .player-modal-right::-webkit-scrollbar { width: 3px; }
+  .player-modal-right::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .gamelog-panel-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase;
+    font-weight: 600; margin-bottom: 14px;
+  }
+
+  @media (max-width: 768px) {
+    #playerModal, #playerModal.split-mode { max-width: 100% !important; border-radius: 12px 12px 0 0; margin: auto 0 0 0; }
+    .player-modal-split { grid-template-columns: 1fr; }
+    .player-modal-left { border-right: none; border-bottom: 1px solid var(--border); max-height: none; }
+    .player-modal-right { max-height: none; }
+  }
   .gamelog-view-toggle {
     display:flex; background:var(--surface2); border:1px solid var(--border);
     border-radius:25px; padding:3px; gap:3px; margin-bottom:14px;
@@ -1112,7 +1146,7 @@
     font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:600;
     letter-spacing:1px; padding:3px 9px; border-radius:4px;
     border:1px solid var(--border2); background:var(--surface2);
-    color:var(--text-dim); cursor:pointer; transition:all 0.15s; text-transform:uppercase;
+    color:#f0f0f0; cursor:pointer; transition:all 0.15s; text-transform:uppercase;
   }
   .gamelog-stat-btn.active { border-color:var(--gamelog-tc,var(--accent-blue)); color:var(--gamelog-tc,var(--accent-blue)); background:rgba(76,201,240,0.08); }
 
@@ -3677,8 +3711,8 @@ async function openPlayerModal(playerId, name, teamAbbr) {
       fetchJSON(`${BASE}/people/${playerId}/stats?stats=season&season=${SEASON}&group=pitching`).catch(()=>null),
       fetchJSON(`${BASE}/people/${playerId}/stats?stats=career&group=hitting`).catch(()=>null),
       fetchJSON(`${BASE}/people/${playerId}/stats?stats=career&group=pitching`).catch(()=>null),
-      fetchJSON(`${BASE}/people/${playerId}/stats?stats=gameLog&season=${SEASON}&group=hitting&gameType=R&limit=10`).catch(()=>null),
-      fetchJSON(`${BASE}/people/${playerId}/stats?stats=gameLog&season=${SEASON}&group=pitching&gameType=R&limit=10`).catch(()=>null),
+      fetchJSON(`${BASE}/people/${playerId}/stats?stats=gameLog&season=${SEASON}&group=hitting&gameType=R`).catch(()=>null),
+      fetchJSON(`${BASE}/people/${playerId}/stats?stats=gameLog&season=${SEASON}&group=pitching&gameType=R`).catch(()=>null),
     ]);
     const data = { bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit };
     playerModalCache[playerId] = data;
@@ -3689,7 +3723,7 @@ async function openPlayerModal(playerId, name, teamAbbr) {
   }
 }
 
-function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit }, tc) {
+function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit }, tc) {
   const person = bioData?.people?.[0];
   if (!person) return;
 
@@ -3754,7 +3788,9 @@ function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit
   document.getElementById('playerCareerStats').innerHTML = statGrid(careerStats, !isPitcher);
 
   // Init game log
-  const rawLog = isPitcher ? gameLogPit?.stats?.[0]?.splits : gameLogHit?.stats?.[0]?.splits;
+  const rawLog = isPitcher
+    ? (gameLogPit?.stats?.[0]?.splits || gameLogPit?.stats?.find(s=>s.type?.displayName==='gameLog')?.splits || [])
+    : (gameLogHit?.stats?.[0]?.splits || gameLogHit?.stats?.find(s=>s.type?.displayName==='gameLog')?.splits || []);
   window._gamelogData = rawLog || [];
   window._gamelogTc   = tc;
   window._gamelogView = 'last10';
@@ -3768,20 +3804,25 @@ function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit
   document.querySelectorAll('.gamelog-stat-btn').forEach(b => {
     b.style.setProperty('--gamelog-tc', tc);
   });
-  // Reset to defaults
+  // Reset split mode to Season view on every open
+  document.getElementById('playerModal').classList.remove('split-mode');
+  document.getElementById('playerModalRight').style.display = 'none';
+  window._gamelogView = 'season';
+
+  // Reset toggle buttons — Season active by default
   document.querySelectorAll('.gamelog-view-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector('.gamelog-view-btn:last-child').classList.add('active');
+  document.querySelector('.gamelog-view-btn[onclick*="season"]').classList.add('active');
+
+  // Reset stat selector — AVG active by default
   document.querySelectorAll('.gamelog-stat-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.gamelog-stat-btn:first-child').classList.add('active');
+  window._gamelogStat = 'avg';
 
   if (isPitcher) {
     document.getElementById('playerRecentSection').style.display = 'none';
   } else {
     document.getElementById('playerRecentSection').style.display = '';
-    document.getElementById('gamelogChartWrap').style.display = '';
-    document.getElementById('gamelogTableWrap').style.display = '';
-    document.getElementById('gamelogStatSelector').style.display = '';
-    renderGamelog();
+    // Don't auto-render — user clicks Last 5/10 to open the panel
   }
 }
 
@@ -5234,11 +5275,19 @@ function setGamelogView(v, btn) {
   window._gamelogView = v;
   document.querySelectorAll('.gamelog-view-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const showChart = v !== 'season';
-  document.getElementById('gamelogChartWrap').style.display    = showChart ? '' : 'none';
-  document.getElementById('gamelogTableWrap').style.display    = showChart ? '' : 'none';
-  document.getElementById('gamelogStatSelector').style.display = showChart ? '' : 'none';
-  if (showChart) renderGamelog();
+
+  const modal      = document.getElementById('playerModal');
+  const rightPanel = document.getElementById('playerModalRight');
+  const showRight  = v !== 'season';
+
+  if (showRight) {
+    modal.classList.add('split-mode');
+    rightPanel.style.display = '';
+    renderGamelog();
+  } else {
+    modal.classList.remove('split-mode');
+    rightPanel.style.display = 'none';
+  }
 }
 
 function setGamelogStat(s, btn) {
@@ -5250,8 +5299,14 @@ function setGamelogStat(s, btn) {
 
 function renderGamelog() {
   const allData = (window._gamelogData || []).map(s => ({
-    date: (() => { const d = new Date(s.date||s.game?.gameDate||''); return isNaN(d)?'—':d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); })(),
-    opp:  s.opponent?.abbreviation || s.team?.abbreviation || '?',
+    date: (() => {
+      const dateStr = s.date || s.game?.gameDate || '';
+      if (!dateStr) return '—';
+      // Handle both YYYY-MM-DD and full ISO strings
+      const d = new Date(dateStr.length === 10 ? dateStr + 'T12:00:00' : dateStr);
+      return isNaN(d) ? dateStr.slice(0,10) : d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    })(),
+    opp:  s.opponent?.abbreviation || s.opponent?.name?.slice(0,3).toUpperCase() || '?',
     ab:   s.stat?.atBats ?? 0,
     h:    s.stat?.hits ?? 0,
     hr:   s.stat?.homeRuns ?? 0,
@@ -5259,7 +5314,7 @@ function renderGamelog() {
     k:    s.stat?.strikeOuts ?? 0,
     sb:   s.stat?.stolenBases ?? 0,
     avg:  parseFloat(s.stat?.avg) || 0,
-  })).reverse();
+  })).filter(g => g.ab > 0 || g.date !== '—'); // filter out non-game rows
 
   const data = window._gamelogView === 'last5' ? allData.slice(-5) : allData.slice(-10);
   const stat = window._gamelogStat || 'avg';
@@ -5289,7 +5344,7 @@ function renderGamelogChart(data, cfg, tc) {
   const overCount  = vals.filter(v => v >= thresh).length;
   const underCount = vals.filter(v => v < thresh).length;
 
-  const W=512, H=110, padL=8, padR=18, padTop=18, padBot=26;
+  const W=512, H=140, padL=8, padR=18, padTop=18, padBot=26;
   const chartW = W-padL-padR, chartH = H-padTop-padBot;
   const n = data.length, barW = Math.floor(chartW/n*0.55), gap = chartW/n;
 
@@ -5399,6 +5454,7 @@ initDashboard();
   <!-- PLAYER MODAL — must be last element so it sits above all other modals -->
   <div class="mlb-modal-overlay" id="playerModalOverlay" onclick="closePlayerModal(event)" style="z-index:9999;">
     <div class="mlb-modal" id="playerModal" style="max-width:560px;">
+      <!-- Sticky header always visible -->
       <div class="mlb-modal-header" id="playerModalHeader" style="padding:16px 24px;">
         <div style="display:flex;align-items:center;gap:16px;flex:1;">
           <div class="player-headshot-wrap">
@@ -5412,29 +5468,46 @@ initDashboard();
         </div>
         <button class="mlb-modal-close" onclick="closePlayerModal()">✕</button>
       </div>
-      <div id="playerQuickStats" style="display:flex;gap:0;border-bottom:1px solid var(--border);">
-        <div class="team-stat-pill" id="plAge">🎂 —</div>
-        <div class="team-stat-pill" id="plHeight">📏 —</div>
-        <div class="team-stat-pill" id="plWeight">⚖️ —</div>
-        <div class="team-stat-pill" id="plBorn">📍 —</div>
-      </div>
-      <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
-        <div class="team-section-label">📊 2026 Season Stats</div>
-        <div id="playerSeasonStats" style="margin-top:12px;">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading stats...</div>
-        </div>
-      </div>
 
-      <!-- Recent Performance -->
-      <div style="padding:16px 24px;border-bottom:1px solid var(--border);" id="playerRecentSection">
-        <div class="team-section-label">📈 Recent Performance</div>
-        <div style="margin-top:12px;">
-          <!-- View toggle -->
-          <div class="gamelog-view-toggle">
-            <button class="gamelog-view-btn" onclick="setGamelogView('season',this)">Season</button>
-            <button class="gamelog-view-btn" onclick="setGamelogView('last5',this)">Last 5</button>
-            <button class="gamelog-view-btn active" onclick="setGamelogView('last10',this)">Last 10</button>
+      <!-- Split body -->
+      <div class="player-modal-split" id="playerModalSplit">
+
+        <!-- LEFT — player info -->
+        <div class="player-modal-left" id="playerModalLeft">
+          <div id="playerQuickStats" style="display:flex;gap:0;border-bottom:1px solid var(--border);">
+            <div class="team-stat-pill" id="plAge">🎂 —</div>
+            <div class="team-stat-pill" id="plHeight">📏 —</div>
+            <div class="team-stat-pill" id="plWeight">⚖️ —</div>
+            <div class="team-stat-pill" id="plBorn">📍 —</div>
           </div>
+          <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
+            <div class="team-section-label">📊 2026 Season Stats</div>
+            <div id="playerSeasonStats" style="margin-top:12px;">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading stats...</div>
+            </div>
+          </div>
+          <!-- View toggle lives in left panel -->
+          <div style="padding:16px 24px;border-bottom:1px solid var(--border);" id="playerRecentSection">
+            <div class="team-section-label">📈 Recent Performance</div>
+            <div style="margin-top:12px;">
+              <div class="gamelog-view-toggle">
+                <button class="gamelog-view-btn active" onclick="setGamelogView('season',this)">Season</button>
+                <button class="gamelog-view-btn" onclick="setGamelogView('last5',this)">Last 5</button>
+                <button class="gamelog-view-btn" onclick="setGamelogView('last10',this)">Last 10</button>
+              </div>
+            </div>
+          </div>
+          <div style="padding:16px 24px;">
+            <div class="team-section-label">🏆 Career Stats</div>
+            <div id="playerCareerStats" style="margin-top:12px;">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT — game log panel (hidden by default) -->
+        <div class="player-modal-right" id="playerModalRight" style="display:none;">
+          <div class="gamelog-panel-title">📈 Game Log</div>
           <!-- Stat selector -->
           <div class="gamelog-stat-selector" id="gamelogStatSelector">
             <button class="gamelog-stat-btn active" onclick="setGamelogStat('avg',this)">AVG</button>
@@ -5451,19 +5524,13 @@ initDashboard();
               <span class="gamelog-avg-badge" id="gamelogAvgBadge">—</span>
             </div>
             <div class="gamelog-prop-legend" id="gamelogPropLegend"></div>
-            <svg class="gamelog-chart" id="gamelogBarChart" height="120"></svg>
+            <svg class="gamelog-chart" id="gamelogBarChart" height="150"></svg>
           </div>
           <!-- Table -->
           <div id="gamelogTableWrap"></div>
         </div>
-      </div>
 
-      <div style="padding:16px 24px;">
-        <div class="team-section-label">🏆 Career Stats</div>
-        <div id="playerCareerStats" style="margin-top:12px;">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading...</div>
-        </div>
-      </div>
+      </div><!-- end split -->
     </div>
   </div>
 
