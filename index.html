@@ -1094,7 +1094,67 @@
   .threat-badge.nohr-triple { animation: threatPulse 2s ease-in-out infinite; }
   .threat-badge.nohr-double { animation: threatPulse 2.5s ease-in-out infinite; }
 
-  /* ── PLAYER HEADSHOT ── */
+  /* ── PLAYER GAME LOG ── */
+  .gamelog-view-toggle {
+    display:flex; background:var(--surface2); border:1px solid var(--border);
+    border-radius:25px; padding:3px; gap:3px; margin-bottom:14px;
+  }
+  .gamelog-view-btn {
+    flex:1; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700;
+    letter-spacing:1px; text-transform:uppercase;
+    padding:6px 10px; border-radius:22px; border:none;
+    background:transparent; color:var(--text-mid); cursor:pointer; transition:all 0.2s;
+  }
+  .gamelog-view-btn.active { background:var(--gamelog-tc,var(--accent-blue)); color:#000; }
+
+  .gamelog-stat-selector { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:12px; }
+  .gamelog-stat-btn {
+    font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:600;
+    letter-spacing:1px; padding:3px 9px; border-radius:4px;
+    border:1px solid var(--border2); background:var(--surface2);
+    color:var(--text-dim); cursor:pointer; transition:all 0.15s; text-transform:uppercase;
+  }
+  .gamelog-stat-btn.active { border-color:var(--gamelog-tc,var(--accent-blue)); color:var(--gamelog-tc,var(--accent-blue)); background:rgba(76,201,240,0.08); }
+
+  .gamelog-chart-wrap {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:10px; padding:12px 12px 6px; margin-bottom:12px;
+  }
+  .gamelog-chart-title {
+    font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:2px;
+    color:#f0f0f0; text-transform:uppercase; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .gamelog-avg-badge {
+    font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600;
+    background:rgba(76,201,240,0.08); border:1px solid rgba(76,201,240,0.25);
+    border-radius:4px; padding:2px 8px;
+  }
+  .gamelog-prop-legend {
+    display:flex; align-items:center; gap:6px; margin-bottom:8px;
+    font-family:'IBM Plex Mono',monospace; font-size:9px; color:#f59e0b;
+    background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2);
+    border-radius:4px; padding:4px 10px;
+  }
+  .gamelog-prop-line { width:14px; border-top:2px dashed #f59e0b; flex-shrink:0; }
+  .gamelog-over  { color:#4ade80; font-weight:700; }
+  .gamelog-under { color:#e63946; font-weight:700; }
+
+  svg.gamelog-chart { width:100%; overflow:visible; }
+
+  .gamelog-table { width:100%; border-collapse:collapse; }
+  .gamelog-table thead tr { background:var(--surface2); }
+  .gamelog-table thead th {
+    font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:1px;
+    color:#f0f0f0; padding:6px 8px; text-align:right; font-weight:600;
+    text-transform:uppercase; border-bottom:1px solid var(--border);
+  }
+  .gamelog-table thead th:first-child { text-align:left; }
+  .gamelog-table tbody tr { border-bottom:1px solid rgba(26,31,46,0.6); transition:background 0.15s; }
+  .gamelog-table tbody tr:hover { background:rgba(255,255,255,0.02); }
+  .gamelog-table tbody tr.gamelog-totals { background:rgba(76,201,240,0.05); border-top:1px solid rgba(76,201,240,0.2); border-bottom:none; }
+  .gamelog-table tbody td { font-family:'IBM Plex Mono',monospace; font-size:11px; padding:6px 8px; text-align:right; color:var(--text-mid); }
+  .gamelog-table tbody td:first-child { text-align:left; font-size:10px; color:#f0f0f0; }
   .player-headshot-wrap {
     width: 80px; height: 100px; border-radius: 10px;
     overflow: hidden; flex-shrink: 0;
@@ -3611,14 +3671,16 @@ async function openPlayerModal(playerId, name, teamAbbr) {
   }
 
   try {
-    const [bioData, seasonHit, seasonPit, careerHit, careerPit] = await Promise.all([
+    const [bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit] = await Promise.all([
       fetchJSON(`${BASE}/people/${playerId}`).catch(()=>null),
       fetchJSON(`${BASE}/people/${playerId}/stats?stats=season&season=${SEASON}&group=hitting`).catch(()=>null),
       fetchJSON(`${BASE}/people/${playerId}/stats?stats=season&season=${SEASON}&group=pitching`).catch(()=>null),
       fetchJSON(`${BASE}/people/${playerId}/stats?stats=career&group=hitting`).catch(()=>null),
       fetchJSON(`${BASE}/people/${playerId}/stats?stats=career&group=pitching`).catch(()=>null),
+      fetchJSON(`${BASE}/people/${playerId}/stats?stats=gameLog&season=${SEASON}&group=hitting&gameType=R&limit=10`).catch(()=>null),
+      fetchJSON(`${BASE}/people/${playerId}/stats?stats=gameLog&season=${SEASON}&group=pitching&gameType=R&limit=10`).catch(()=>null),
     ]);
-    const data = { bioData, seasonHit, seasonPit, careerHit, careerPit };
+    const data = { bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit };
     playerModalCache[playerId] = data;
     renderPlayerModal(data, tc);
   } catch(e) {
@@ -3690,6 +3752,37 @@ function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit
 
   document.getElementById('playerSeasonStats').innerHTML = statGrid(seasonStats, !isPitcher);
   document.getElementById('playerCareerStats').innerHTML = statGrid(careerStats, !isPitcher);
+
+  // Init game log
+  const rawLog = isPitcher ? gameLogPit?.stats?.[0]?.splits : gameLogHit?.stats?.[0]?.splits;
+  window._gamelogData = rawLog || [];
+  window._gamelogTc   = tc;
+  window._gamelogView = 'last10';
+  window._gamelogStat = 'avg';
+  window._gamelogIsPitcher = isPitcher;
+
+  // Update active toggle button styling with tc color
+  document.querySelectorAll('.gamelog-view-btn').forEach(b => {
+    b.style.setProperty('--gamelog-tc', tc);
+  });
+  document.querySelectorAll('.gamelog-stat-btn').forEach(b => {
+    b.style.setProperty('--gamelog-tc', tc);
+  });
+  // Reset to defaults
+  document.querySelectorAll('.gamelog-view-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.gamelog-view-btn:last-child').classList.add('active');
+  document.querySelectorAll('.gamelog-stat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.gamelog-stat-btn:first-child').classList.add('active');
+
+  if (isPitcher) {
+    document.getElementById('playerRecentSection').style.display = 'none';
+  } else {
+    document.getElementById('playerRecentSection').style.display = '';
+    document.getElementById('gamelogChartWrap').style.display = '';
+    document.getElementById('gamelogTableWrap').style.display = '';
+    document.getElementById('gamelogStatSelector').style.display = '';
+    renderGamelog();
+  }
 }
 
 // ── SCHEDULE MODAL ────────────────────────────────────────────────────
@@ -5127,6 +5220,179 @@ function toggleTheme() {
   } catch(e) {}
 })();
 
+// ── PLAYER GAME LOG ───────────────────────────────────────────────────
+const GAMELOG_THRESHOLDS = {
+  avg: { label:'BATTING AVG', fmt: v => v.toFixed(3).replace('0.','.'), color:'#7799cc', threshold:0.300, threshLabel:'.300' },
+  h:   { label:'HITS',        fmt: v => v,                              color:'#4cc9f0', threshold:3,     threshLabel:'3'    },
+  hr:  { label:'HOME RUNS',   fmt: v => v,                              color:'#ffd60a', threshold:1,     threshLabel:'1'    },
+  rbi: { label:'RBI',         fmt: v => v,                              color:'#4ade80', threshold:2,     threshLabel:'2'    },
+  k:   { label:'STRIKEOUTS',  fmt: v => v,                              color:'#e63946', threshold:2,     threshLabel:'2'    },
+  sb:  { label:'STOLEN BASES',fmt: v => v,                              color:'#a78bfa', threshold:1,     threshLabel:'1'    },
+};
+
+function setGamelogView(v, btn) {
+  window._gamelogView = v;
+  document.querySelectorAll('.gamelog-view-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const showChart = v !== 'season';
+  document.getElementById('gamelogChartWrap').style.display    = showChart ? '' : 'none';
+  document.getElementById('gamelogTableWrap').style.display    = showChart ? '' : 'none';
+  document.getElementById('gamelogStatSelector').style.display = showChart ? '' : 'none';
+  if (showChart) renderGamelog();
+}
+
+function setGamelogStat(s, btn) {
+  window._gamelogStat = s;
+  document.querySelectorAll('.gamelog-stat-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderGamelog();
+}
+
+function renderGamelog() {
+  const allData = (window._gamelogData || []).map(s => ({
+    date: (() => { const d = new Date(s.date||s.game?.gameDate||''); return isNaN(d)?'—':d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); })(),
+    opp:  s.opponent?.abbreviation || s.team?.abbreviation || '?',
+    ab:   s.stat?.atBats ?? 0,
+    h:    s.stat?.hits ?? 0,
+    hr:   s.stat?.homeRuns ?? 0,
+    rbi:  s.stat?.rbi ?? 0,
+    k:    s.stat?.strikeOuts ?? 0,
+    sb:   s.stat?.stolenBases ?? 0,
+    avg:  parseFloat(s.stat?.avg) || 0,
+  })).reverse();
+
+  const data = window._gamelogView === 'last5' ? allData.slice(-5) : allData.slice(-10);
+  const stat = window._gamelogStat || 'avg';
+  const cfg  = GAMELOG_THRESHOLDS[stat];
+  const tc   = window._gamelogTc || 'var(--accent-blue)';
+
+  if (!data.length) {
+    document.getElementById('gamelogBarChart').innerHTML = '';
+    document.getElementById('gamelogTableWrap').innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">No game log data available yet</div>`;
+    document.getElementById('gamelogPropLegend').innerHTML = '';
+    return;
+  }
+
+  // Update badge color to tc
+  document.getElementById('gamelogAvgBadge').style.color = tc;
+  document.getElementById('gamelogAvgBadge').style.borderColor = tc + '44';
+
+  renderGamelogChart(data, cfg, tc);
+  renderGamelogTable(data, tc);
+}
+
+function renderGamelogChart(data, cfg, tc) {
+  const vals   = data.map(g => g[window._gamelogStat] ?? g.avg);
+  const thresh = cfg.threshold;
+  const max    = Math.max(...vals, thresh * 1.2, cfg.threshold === 0.300 ? 0.4 : 1);
+  const avg    = vals.reduce((a,b)=>a+b,0) / vals.length;
+  const overCount  = vals.filter(v => v >= thresh).length;
+  const underCount = vals.filter(v => v < thresh).length;
+
+  const W=512, H=110, padL=8, padR=18, padTop=18, padBot=26;
+  const chartW = W-padL-padR, chartH = H-padTop-padBot;
+  const n = data.length, barW = Math.floor(chartW/n*0.55), gap = chartW/n;
+
+  // Badge + label
+  document.getElementById('gamelogAvgBadge').textContent = cfg.threshold < 1
+    ? `AVG ${avg.toFixed(3).replace('0.','.')}`
+    : `AVG ${avg.toFixed(1)}/G`;
+  document.getElementById('gamelogChartLabel').textContent = `${cfg.label} — ${window._gamelogView==='last5'?'LAST 5':'LAST 10'} GAMES`;
+
+  // Prop legend
+  document.getElementById('gamelogPropLegend').innerHTML = `
+    <div class="gamelog-prop-line"></div>
+    PROP LINE: ${cfg.threshLabel} &nbsp;·&nbsp;
+    <span class="gamelog-over">▲ ${overCount} OVER</span> &nbsp;·&nbsp;
+    <span class="gamelog-under">▼ ${underCount} UNDER</span>
+  `;
+
+  // Grid
+  const grid = [0,0.25,0.5,0.75,1].map(p => {
+    const y = padTop + chartH*(1-p);
+    return `<line stroke="rgba(30,37,48,0.8)" stroke-width="1" x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"/>`;
+  }).join('');
+
+  // Threshold line
+  const tY = padTop + chartH*(1 - thresh/max);
+  const threshLine = `
+    <line stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3" x1="${padL}" y1="${tY}" x2="${W-padR}" y2="${tY}"/>
+    <text x="${W-padR+2}" y="${tY+4}" font-family="IBM Plex Mono" font-size="8" fill="#f59e0b" font-weight="600">${cfg.threshLabel}</text>
+  `;
+
+  // Bars
+  const bars = data.map((g, i) => {
+    const v    = g[window._gamelogStat] ?? g.avg;
+    const pct  = max > 0 ? v/max : 0;
+    const bH   = Math.max(pct*chartH, v > 0 ? 3 : 0);
+    const x    = padL + gap*i + gap/2 - barW/2;
+    const y    = padTop + chartH - bH;
+    const over = v >= thresh;
+    const bc   = over ? '#4ade8088' : (v===0 ? 'rgba(255,255,255,0.08)' : '#e6394688');
+    const bs   = over ? '#4ade80'   : (v===0 ? 'rgba(255,255,255,0.15)' : '#e63946');
+    return `
+      <rect x="${x}" y="${y}" width="${barW}" height="${bH}" fill="${bc}" rx="2" stroke="${bs}" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="${x+barW/2}" y="${y-4}" font-family="IBM Plex Mono" font-size="9" font-weight="600" fill="${bs}" text-anchor="middle">${cfg.fmt(v)}</text>
+      <text x="${x+barW/2}" y="${padTop+chartH+15}" font-family="IBM Plex Mono" font-size="9" fill="#f0f0f0" text-anchor="middle">${g.date}</text>
+    `;
+  }).join('');
+
+  // Trend line for AVG
+  let trend = '';
+  if (window._gamelogStat === 'avg') {
+    const pts = data.map((g,i) => `${padL+gap*i+gap/2},${padTop+chartH*(1-g.avg/max)}`).join(' ');
+    trend = `<polyline points="${pts}" fill="none" stroke="${tc}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>`;
+  }
+
+  const svg = document.getElementById('gamelogBarChart');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = grid + threshLine + bars + trend;
+}
+
+function renderGamelogTable(data, tc) {
+  const THRESH = { avg:0.300, h:3, hr:1, rbi:2, k:2, sb:1 };
+  const tot = data.reduce((a,g) => { a.ab+=g.ab;a.h+=g.h;a.hr+=g.hr;a.rbi+=g.rbi;a.k+=g.k;a.sb+=g.sb; return a; }, {ab:0,h:0,hr:0,rbi:0,k:0,sb:0});
+  const avgCalc = tot.ab > 0 ? (tot.h/tot.ab).toFixed(3).replace('0.','.') : '.000';
+
+  function cell(v, s) {
+    const over = v >= THRESH[s];
+    const st = v === 0 ? 'color:var(--text-dim);' : over ? 'color:#4ade80;font-weight:700;' : 'color:#e63946;font-weight:700;';
+    return `<td style="${st}">${s==='avg'?v.toFixed(3).replace('0.','.'):v}</td>`;
+  }
+
+  const rows = data.map(g => `<tr>
+    <td style="color:#f0f0f0;">${g.date} <span style="color:var(--text-mid);font-size:9px;">vs ${g.opp}</span></td>
+    <td style="color:var(--text-mid);">${g.ab}</td>
+    ${cell(g.h,'h')}${cell(g.hr,'hr')}${cell(g.rbi,'rbi')}${cell(g.k,'k')}${cell(g.sb,'sb')}${cell(g.avg,'avg')}
+  </tr>`).join('');
+
+  document.getElementById('gamelogTableWrap').innerHTML = `
+    <table class="gamelog-table">
+      <thead><tr>
+        <th>DATE</th><th>AB</th>
+        <th>H <span style="color:#f59e0b;font-size:8px;">(3)</span></th>
+        <th>HR <span style="color:#f59e0b;font-size:8px;">(1)</span></th>
+        <th>RBI <span style="color:#f59e0b;font-size:8px;">(2)</span></th>
+        <th>K <span style="color:#f59e0b;font-size:8px;">(2)</span></th>
+        <th>SB <span style="color:#f59e0b;font-size:8px;">(1)</span></th>
+        <th>AVG <span style="color:#f59e0b;font-size:8px;">(.300)</span></th>
+      </tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="gamelog-totals">
+          <td style="color:var(--text-mid);font-size:10px;font-weight:600;">${data.length}G TOTALS</td>
+          <td style="color:var(--text-mid);">${tot.ab}</td>
+          <td style="color:#4cc9f0;font-weight:700;">${tot.h}</td>
+          <td style="color:#ffd60a;font-weight:700;">${tot.hr}</td>
+          <td style="color:#4ade80;font-weight:700;">${tot.rbi}</td>
+          <td style="color:#e63946;font-weight:700;">${tot.k}</td>
+          <td style="color:#a78bfa;font-weight:700;">${tot.sb}</td>
+          <td style="color:${tc};font-weight:700;">${avgCalc}</td>
+        </tr>
+      </tbody>
+    </table>`;
+}
+
 if ('Notification' in window && Notification.permission==='default') Notification.requestPermission();
 initDashboard();
 </script>
@@ -5158,6 +5424,40 @@ initDashboard();
           <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px 0;">Loading stats...</div>
         </div>
       </div>
+
+      <!-- Recent Performance -->
+      <div style="padding:16px 24px;border-bottom:1px solid var(--border);" id="playerRecentSection">
+        <div class="team-section-label">📈 Recent Performance</div>
+        <div style="margin-top:12px;">
+          <!-- View toggle -->
+          <div class="gamelog-view-toggle">
+            <button class="gamelog-view-btn" onclick="setGamelogView('season',this)">Season</button>
+            <button class="gamelog-view-btn" onclick="setGamelogView('last5',this)">Last 5</button>
+            <button class="gamelog-view-btn active" onclick="setGamelogView('last10',this)">Last 10</button>
+          </div>
+          <!-- Stat selector -->
+          <div class="gamelog-stat-selector" id="gamelogStatSelector">
+            <button class="gamelog-stat-btn active" onclick="setGamelogStat('avg',this)">AVG</button>
+            <button class="gamelog-stat-btn" onclick="setGamelogStat('h',this)">H</button>
+            <button class="gamelog-stat-btn" onclick="setGamelogStat('hr',this)">HR</button>
+            <button class="gamelog-stat-btn" onclick="setGamelogStat('rbi',this)">RBI</button>
+            <button class="gamelog-stat-btn" onclick="setGamelogStat('k',this)">K</button>
+            <button class="gamelog-stat-btn" onclick="setGamelogStat('sb',this)">SB</button>
+          </div>
+          <!-- Chart -->
+          <div class="gamelog-chart-wrap" id="gamelogChartWrap">
+            <div class="gamelog-chart-title">
+              <span id="gamelogChartLabel">—</span>
+              <span class="gamelog-avg-badge" id="gamelogAvgBadge">—</span>
+            </div>
+            <div class="gamelog-prop-legend" id="gamelogPropLegend"></div>
+            <svg class="gamelog-chart" id="gamelogBarChart" height="120"></svg>
+          </div>
+          <!-- Table -->
+          <div id="gamelogTableWrap"></div>
+        </div>
+      </div>
+
       <div style="padding:16px 24px;">
         <div class="team-section-label">🏆 Career Stats</div>
         <div id="playerCareerStats" style="margin-top:12px;">
