@@ -1096,12 +1096,15 @@
 
   /* ── PLAYER MODAL SPLIT SCREEN ── */
   #playerModal { transition: max-width 0.3s ease; max-width: 560px !important; }
-  #playerModal.split-mode { max-width: 960px !important; }
+  #playerModal.split-mode { max-width: 1100px !important; }
 
   .player-modal-split {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     min-height: 0;
+  }
+  #playerModal.split-mode .player-modal-split {
+    grid-template-columns: 1fr 1fr;
   }
   .player-modal-left {
     overflow-y: auto; max-height: calc(88vh - 60px);
@@ -1188,7 +1191,7 @@
   .gamelog-table tbody tr:hover { background:rgba(255,255,255,0.02); }
   .gamelog-table tbody tr.gamelog-totals { background:rgba(76,201,240,0.05); border-top:1px solid rgba(76,201,240,0.2); border-bottom:none; }
   .gamelog-table tbody td { font-family:'IBM Plex Mono',monospace; font-size:11px; padding:6px 8px; text-align:right; color:var(--text-mid); }
-  .gamelog-table tbody td:first-child { text-align:left; font-size:10px; color:#f0f0f0; }
+  .gamelog-table tbody td:first-child { text-align:left; font-size:10px; color:#f0f0f0; white-space:nowrap; min-width:90px; }
   .player-headshot-wrap {
     width: 80px; height: 100px; border-radius: 10px;
     overflow: hidden; flex-shrink: 0;
@@ -2450,7 +2453,7 @@ const _landingShownAt = Date.now();
 function hideLoading() {
   const ls = document.getElementById('loadingScreen');
   const elapsed = Date.now() - _landingShownAt;
-  const minDisplay = 10000; // 10 seconds minimum landing page view
+  const minDisplay = 5000; // 5 seconds minimum landing page view
   const remaining = Math.max(0, minDisplay - elapsed);
   setTimeout(() => {
     ls.classList.add('hidden');
@@ -5282,10 +5285,12 @@ function setGamelogView(v, btn) {
 
   if (showRight) {
     modal.classList.add('split-mode');
+    modal.style.removeProperty('max-width');
     rightPanel.style.display = '';
     renderGamelog();
   } else {
     modal.classList.remove('split-mode');
+    modal.style.removeProperty('max-width');
     rightPanel.style.display = 'none';
   }
 }
@@ -5339,12 +5344,20 @@ function renderGamelog() {
 function renderGamelogChart(data, cfg, tc) {
   const vals   = data.map(g => g[window._gamelogStat] ?? g.avg);
   const thresh = cfg.threshold;
-  const max    = Math.max(...vals, thresh * 1.2, cfg.threshold === 0.300 ? 0.4 : 1);
+  // Force clean max for AVG so Y-axis lands on .100 increments
+  let max;
+  if (cfg.threshold < 1) {
+    const rawMax = Math.max(...vals, thresh * 1.2, 0.4);
+    max = Math.ceil(rawMax * 10) / 10; // round up to nearest .100
+  } else {
+    max = Math.max(...vals, thresh * 1.2, 1);
+    max = Math.ceil(max); // round up to nearest integer
+  }
   const avg    = vals.reduce((a,b)=>a+b,0) / vals.length;
   const overCount  = vals.filter(v => v >= thresh).length;
   const underCount = vals.filter(v => v < thresh).length;
 
-  const W=512, H=140, padL=8, padR=18, padTop=18, padBot=26;
+  const W=512, H=308, padL=32, padR=18, padTop=18, padBot=26;
   const chartW = W-padL-padR, chartH = H-padTop-padBot;
   const n = data.length, barW = Math.floor(chartW/n*0.55), gap = chartW/n;
 
@@ -5354,26 +5367,30 @@ function renderGamelogChart(data, cfg, tc) {
     : `AVG ${avg.toFixed(1)}/G`;
   document.getElementById('gamelogChartLabel').textContent = `${cfg.label} — ${window._gamelogView==='last5'?'LAST 5':'LAST 10'} GAMES`;
 
-  // Prop legend
-  document.getElementById('gamelogPropLegend').innerHTML = `
-    <div class="gamelog-prop-line"></div>
-    PROP LINE: ${cfg.threshLabel} &nbsp;·&nbsp;
-    <span class="gamelog-over">▲ ${overCount} OVER</span> &nbsp;·&nbsp;
-    <span class="gamelog-under">▼ ${underCount} UNDER</span>
-  `;
+  // Prop legend removed
 
-  // Grid
-  const grid = [0,0.25,0.5,0.75,1].map(p => {
-    const y = padTop + chartH*(1-p);
-    return `<line stroke="rgba(30,37,48,0.8)" stroke-width="1" x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"/>`;
+  // Y-axis labels
+  const ySteps = 5;
+  const grid = Array.from({length: ySteps + 1}, (_, i) => {
+    const pct = i / ySteps;
+    const y = padTop + chartH * (1 - pct);
+    const val = max * pct;
+    let label;
+    if (cfg.threshold < 1) {
+      // AVG — round to nearest .050 and display as .000
+      const rounded = Math.round(val * 20) / 20; // nearest .050
+      const cents = Math.round(rounded * 1000);
+      label = '.' + String(cents).padStart(3, '0');
+    } else {
+      label = Math.round(val);
+    }
+    return `
+      <line stroke="rgba(255,255,255,0.04)" stroke-width="1" x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"/>
+      <text x="${padL - 4}" y="${y + 4}" font-family="IBM Plex Mono" font-size="8" fill="#6b7280" text-anchor="end">${label}</text>
+    `;
   }).join('');
 
-  // Threshold line
-  const tY = padTop + chartH*(1 - thresh/max);
-  const threshLine = `
-    <line stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3" x1="${padL}" y1="${tY}" x2="${W-padR}" y2="${tY}"/>
-    <text x="${W-padR+2}" y="${tY+4}" font-family="IBM Plex Mono" font-size="8" fill="#f59e0b" font-weight="600">${cfg.threshLabel}</text>
-  `;
+  // Threshold line removed — prop line shown in legend only
 
   // Bars
   const bars = data.map((g, i) => {
@@ -5401,7 +5418,7 @@ function renderGamelogChart(data, cfg, tc) {
 
   const svg = document.getElementById('gamelogBarChart');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.innerHTML = grid + threshLine + bars + trend;
+  svg.innerHTML = grid + bars + trend;
 }
 
 function renderGamelogTable(data, tc) {
@@ -5523,8 +5540,7 @@ initDashboard();
               <span id="gamelogChartLabel">—</span>
               <span class="gamelog-avg-badge" id="gamelogAvgBadge">—</span>
             </div>
-            <div class="gamelog-prop-legend" id="gamelogPropLegend"></div>
-            <svg class="gamelog-chart" id="gamelogBarChart" height="150"></svg>
+            <svg class="gamelog-chart" id="gamelogBarChart" height="330"></svg>
           </div>
           <!-- Table -->
           <div id="gamelogTableWrap"></div>
