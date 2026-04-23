@@ -4628,10 +4628,10 @@ function renderHRTicker() {
       items = todayHitters.map(p => {
         const tc = tickerTeamColor(p.team);
         const tcLight = tc + "44";
+        // seasonHR from boxscore already includes today's HR
         return `<span class="hr-ticker-item">
           <span class="ticker-name">${p.name}</span>
-          <span class="ticker-today">${p.todayHR} HR</span>
-          <span class="ticker-season">(${p.seasonHR})</span>
+          <span class="ticker-today">${p.todayHR} HR (${p.seasonHR} season)</span>
           <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${tc};border:1px solid ${tcLight};padding:1px 5px;border-radius:3px;">${p.team}</span>
         </span>`;
       });
@@ -4720,12 +4720,13 @@ async function fetchTickerHRData() {
         for (const [,pd] of Object.entries(players)) {
           const todayHR = pd.stats?.batting?.homeRuns || 0;
           if (todayHR > 0) {
-            const id = pd.person?.id;
+            const id   = pd.person?.id;
             const name = pd.person?.fullName || '—';
             const team = side === 'away' ? game.away.team : game.home.team;
-            // Look up season HR from hitters array
-            const seasonData = hitters.find(h=>h.id===id);
-            const seasonHR = seasonData?.hr ?? todayHR;
+            // Try season stats from boxscore first, then fall back to hitters array
+            const seasonStatsHR = pd.seasonStats?.batting?.homeRuns ?? null;
+            const hitterData    = hitters.find(h => h.id === id);
+            const seasonHR      = seasonStatsHR !== null ? seasonStatsHR : (hitterData?.hr ?? todayHR);
             tickerPlayers.push({ id, name, team, todayHR, seasonHR });
           }
         }
