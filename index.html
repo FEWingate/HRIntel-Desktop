@@ -323,7 +323,7 @@
   .hr-ticker-track {
     display: flex; align-items: center;
     white-space: nowrap;
-    animation: tickerScroll 30s linear infinite;
+    animation: none; /* duration set dynamically in JS based on item count */
     will-change: transform;
   }
   .hr-ticker-track:hover { animation-play-state: paused; }
@@ -2453,7 +2453,7 @@ const _landingShownAt = Date.now();
 function hideLoading() {
   const ls = document.getElementById('loadingScreen');
   const elapsed = Date.now() - _landingShownAt;
-  const minDisplay = 5000; // 5 seconds minimum landing page view
+  const minDisplay = 10000; // 10 seconds minimum landing page view
   const remaining = Math.max(0, minDisplay - elapsed);
   setTimeout(() => {
     ls.classList.add('hidden');
@@ -4631,7 +4631,7 @@ function renderHRTicker() {
         // seasonHR from boxscore already includes today's HR
         return `<span class="hr-ticker-item">
           <span class="ticker-name">${p.name}</span>
-          <span class="ticker-today">${p.todayHR} HR (${p.seasonHR} season)</span>
+          <span class="ticker-today">${p.todayHR} HR (${p.seasonHR})</span>
           <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${tc};border:1px solid ${tcLight};padding:1px 5px;border-radius:3px;">${p.team}</span>
         </span>`;
       });
@@ -4661,49 +4661,44 @@ function renderHRTicker() {
 
   if (!items.length) return;
 
-  // Double the items for seamless infinite loop
-  const html = [...items, ...items].join('');
-  track.innerHTML = html;
-
   // Kill any existing animation
+  if (window._tickerAnimId) { cancelAnimationFrame(window._tickerAnimId); window._tickerAnimId = null; }
   track.style.animation = 'none';
   track.style.transform = 'translateX(0)';
 
-  if (items.length >= 3) {
-    // Wait for DOM to render then measure and animate
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const fullWidth  = track.scrollWidth; // total width of doubled content
-        const halfWidth  = fullWidth / 2;     // width of one full set of items
-        const speed      = 50;               // pixels per second
-        let pos          = 0;
-        let lastTime     = null;
+  // Single set first so we can measure true width
+  track.innerHTML = items.join('');
 
-        // Cancel any existing ticker animation
-        if (window._tickerAnimId) cancelAnimationFrame(window._tickerAnimId);
+  if (items.length >= 2) {
+    setTimeout(() => {
+      // Temporarily lift overflow to get true scrollWidth
+      const wrap = document.getElementById('hrTickerWrap');
+      wrap.style.overflow = 'visible';
+      const singleWidth = track.scrollWidth;
+      wrap.style.overflow = '';
 
-        function step(ts) {
-          if (!lastTime) lastTime = ts;
-          const delta = ts - lastTime;
-          lastTime = ts;
+      if (singleWidth === 0) return;
 
-          pos += speed * (delta / 1000);
+      // Now double the items for seamless loop
+      track.innerHTML = items.join('') + items.join('');
 
-          // When we've scrolled one full set, reset silently to 0 (seamless loop)
-          if (pos >= halfWidth) {
-            pos -= halfWidth;
-          }
+      const speed = 80; // pixels per second
+      let pos = 0;
+      let lastTime = null;
 
-          track.style.transform = `translateX(-${pos}px)`;
-          window._tickerAnimId = requestAnimationFrame(step);
-        }
-
+      function step(ts) {
+        if (!lastTime) lastTime = ts;
+        const delta = ts - lastTime;
+        lastTime = ts;
+        pos += speed * (delta / 1000);
+        // Reset exactly at the end of the first set — jumps back silently
+        if (pos >= singleWidth) pos -= singleWidth;
+        track.style.transform = `translateX(-${pos}px)`;
         window._tickerAnimId = requestAnimationFrame(step);
-      });
-    });
-  } else {
-    track.style.transform = 'translateX(0)';
-    track.innerHTML = items.join('');
+      }
+
+      window._tickerAnimId = requestAnimationFrame(step);
+    }, 300);
   }
 }
 
