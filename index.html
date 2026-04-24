@@ -1039,16 +1039,17 @@
   .threats-tab-bar {
     display: flex; background: var(--surface2);
     border: 1px solid var(--border); border-radius: 25px;
-    padding: 4px; gap: 4px; margin-bottom: 20px; max-width: 360px;
+    padding: 4px; gap: 4px; margin-bottom: 20px; max-width: 560px;
+    align-items: center;
   }
   .threats-tab-btn {
-    flex: 1; font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 2px;
-    padding: 8px 16px; border-radius: 22px; border: none;
+    flex: 1; font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px;
+    padding: 8px 14px; border-radius: 22px; border: 1px solid transparent;
     background: transparent; color: var(--text-dim);
-    cursor: pointer; transition: all 0.2s; text-align: center;
+    cursor: pointer; transition: all 0.2s; text-align: center; white-space: nowrap;
   }
-  .threats-tab-btn.active-hr { background: var(--accent-gold); color: #000; }
-  .threats-tab-btn.active-nohr { background: #c77dff; color: #000; }
+  .threats-tab-btn.active-hr { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); }
+  .threats-tab-btn.active-nohr { background: #c77dff; color: #000; border-color: #c77dff; }
 
   .threats-panel { display: none; }
   .threats-panel.active { display: block; }
@@ -1094,7 +1095,122 @@
   .threat-badge.nohr-triple { animation: threatPulse 2s ease-in-out infinite; }
   .threat-badge.nohr-double { animation: threatPulse 2.5s ease-in-out infinite; }
 
-  /* ── PLAYER MODAL SPLIT SCREEN ── */
+  /* ── THREAT TRACKER ── */
+  .tracker-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:900; align-items:center; justify-content:center; padding:20px; }
+  .tracker-modal-overlay.open { display:flex; }
+  .tracker-modal {
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    width:100%; max-width:860px; max-height:90vh; overflow:hidden;
+    display:flex; flex-direction:column; box-shadow:0 24px 64px rgba(0,0,0,0.6);
+  }
+  .tracker-modal-header {
+    padding:16px 24px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    background:rgba(255,255,255,0.02); flex-shrink:0;
+  }
+  .tracker-modal-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--text); }
+  .tracker-modal-close { background:none; border:none; color:var(--text-dim); font-size:18px; cursor:pointer; padding:4px; }
+  .tracker-modal-close:hover { color:var(--text); }
+
+  /* Season summary */
+  .tracker-season-summary {
+    padding:14px 24px; border-bottom:1px solid var(--border);
+    display:flex; gap:16px; flex-wrap:wrap; align-items:center;
+    background:rgba(255,255,255,0.01); flex-shrink:0;
+  }
+  .tracker-season-label { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-right:4px; }
+  .tracker-season-stat {
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:8px; padding:8px 14px;
+  }
+  .tracker-season-stat .ts-label { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:1px; color:var(--text-dim); text-transform:uppercase; }
+  .tracker-season-stat .ts-val { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--text); }
+  .tracker-season-stat .ts-pct { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; }
+  .ts-pct.hot { color:#4ade80; }
+  .ts-pct.warm { color:#f59e0b; }
+  .ts-pct.cold { color:#e63946; }
+
+  /* Date nav */
+  .tracker-date-nav {
+    padding:10px 24px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:12px; flex-shrink:0;
+    background:rgba(255,255,255,0.01);
+  }
+  .tracker-nav-btn {
+    font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:700;
+    background:var(--surface2); border:1px solid var(--border);
+    color:var(--text-mid); cursor:pointer; border-radius:6px;
+    width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+    transition:all 0.15s; flex-shrink:0;
+  }
+  .tracker-nav-btn:hover { border-color:var(--accent-blue); color:var(--accent-blue); }
+  .tracker-nav-btn:disabled { opacity:0.3; cursor:not-allowed; }
+  .tracker-date-label { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; color:var(--text); flex:1; text-align:center; }
+  .tracker-today-btn {
+    font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; letter-spacing:1px;
+    background:var(--surface2); border:1px solid var(--border2); color:var(--text-mid);
+    border-radius:12px; padding:4px 10px; cursor:pointer; transition:all 0.15s;
+  }
+  .tracker-today-btn:hover { border-color:var(--accent-blue); color:var(--accent-blue); }
+
+  /* Scroll body */
+  .tracker-body { overflow-y:auto; flex:1; padding:16px 24px; }
+  .tracker-body::-webkit-scrollbar { width:3px; }
+  .tracker-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+  /* No data state */
+  .tracker-empty {
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim);
+    text-align:center; padding:40px 20px; line-height:1.8;
+  }
+
+  /* Tracker cards */
+  .tracker-card {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:12px; margin-bottom:10px; overflow:hidden;
+    display:flex; align-items:stretch; gap:0;
+    transition:border-color 0.2s;
+  }
+  .tracker-card.triple { border-left:3px solid var(--accent-gold); }
+  .tracker-card.double { border-left:3px solid var(--accent-orange); }
+  .tracker-card-body { flex:1; padding:12px 16px; }
+  .tracker-card-game { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); margin-bottom:6px; letter-spacing:0.5px; }
+  .tracker-card-matchup { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .tracker-card-hitter { font-size:14px; font-weight:700; color:var(--text); }
+  .tracker-card-vs { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); }
+  .tracker-card-pitcher { font-size:13px; color:var(--text-mid); }
+  .tracker-card-tags { display:flex; gap:5px; flex-wrap:wrap; }
+
+  /* Result box */
+  .tracker-result {
+    width:64px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    border-left:1px solid var(--border); font-size:24px;
+    background:rgba(255,255,255,0.01);
+  }
+  .tracker-result.pending { color:var(--border2); font-size:18px; }
+  .tracker-result.hit { background:rgba(74,222,128,0.08); color:#4ade80; }
+  .tracker-result.miss { background:rgba(230,57,70,0.08); color:#e63946; }
+  .tracker-result-box {
+    width:32px; height:32px; border-radius:6px; border:2px solid var(--border2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; font-weight:700;
+  }
+  .tracker-result.pending .tracker-result-box { border-color:var(--border2); }
+  .tracker-result.hit .tracker-result-box { border-color:#4ade80; background:rgba(74,222,128,0.15); }
+  .tracker-result.miss .tracker-result-box { border-color:#e63946; background:rgba(230,57,70,0.15); }
+
+  /* Daily summary */
+  .tracker-daily-summary {
+    margin-top:16px; padding:12px 16px;
+    background:rgba(255,255,255,0.02); border:1px solid var(--border);
+    border-radius:10px; display:flex; gap:20px; flex-wrap:wrap; align-items:center;
+  }
+  .tracker-daily-label { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; }
+  .tracker-daily-stat { font-family:'IBM Plex Mono',monospace; font-size:11px; }
+  .tracker-daily-stat .hit-count { color:#4ade80; font-weight:700; }
+  .tracker-daily-stat .miss-count { color:#e63946; font-weight:700; }
+  .tracker-daily-stat .pending-count { color:var(--text-dim); }
   #playerModal { transition: max-width 0.3s ease; max-width: 560px !important; }
   #playerModal.split-mode { max-width: 1100px !important; }
 
@@ -2139,6 +2255,15 @@
         </div>
       </div>
 
+      <!-- THREAT TRACKER -->
+      <div class="sidebar-section">
+        <div class="sidebar-mlb-btn" onclick="openTrackerModal()" style="border-color:rgba(167,139,250,0.2);">
+          <span class="sidebar-mlb-icon">📊</span>
+          <span class="sidebar-mlb-label" style="color:var(--accent-purple);">Threat Tracker</span>
+          <span class="sidebar-mlb-arrow" style="color:var(--accent-purple);">›</span>
+        </div>
+      </div>
+
     </aside>
 
     <!-- MAIN CONTENT -->
@@ -2165,6 +2290,7 @@
     <div class="threats-tab-bar">
       <button class="threats-tab-btn active-hr" id="hrThreatsBtn" onclick="switchThreatsTab('hr')">⚡ HR Threats</button>
       <button class="threats-tab-btn" id="nohrThreatsBtn" onclick="switchThreatsTab('nohr')">🛡️ NO HR Threats</button>
+      <button class="threats-tab-btn" onclick="openTrackerModal()" style="margin-left:auto;border-color:var(--accent-purple);color:var(--accent-purple);">📊 Threat Tracker</button>
     </div>
     <div class="threats-panel active" id="hrThreatsPanel">
       <div id="alertsContainer"><div class="no-alerts">Analyzing matchups...</div></div>
@@ -2729,7 +2855,9 @@ async function fetchTeamHRLeaders(teamId) {
 function analyzeMatchups() {
   const hitterIds  = new Set(hitters.map(h=>h.id));
   const pitcherIds = new Set(hrPitchers.map(p=>p.id));
-  const top10Ids   = new Set(venues.slice(0,10).map(v=>v.venueId));
+  // Use HR total of 10th venue as threshold — all venues tied with it qualify
+  const top10MinHR = venues.length >= 10 ? venues[9].hr : 0;
+  const top10Ids   = new Set(venues.filter(v => v.hr >= top10MinHR).map(v=>v.venueId));
   const hitterMap  = Object.fromEntries(hitters.map((h,i)=>[h.id,{...h,rank:i+1}]));
   const pitcherMap = Object.fromEntries(hrPitchers.map((p,i)=>[p.id,{...p,rank:i+1}]));
 
@@ -2947,6 +3075,8 @@ function renderAlerts(alerts) {
     c.innerHTML = `<div class="no-alerts">✓ No threat matchups detected yet. Check back once lineups post (~3hrs before first pitch).</div>`;
     return;
   }
+  // Capture today's threats for the tracker (once per day)
+  trackerCaptureToday(alerts);
   c.innerHTML = alerts.map(a=>{
     const cls         = a.type==='triple' ? 'alert-triple' : 'alert-double';
     const pitcherHand = a.pitcher?.id ? handednessCache[a.pitcher.id] : null;
@@ -3184,7 +3314,8 @@ async function renderGames(alerts, noHRAlerts) {
   const hitterIds  = new Set(hitters.map(h=>h.id));
   const hitterMap  = Object.fromEntries(hitters.map((h,i)=>[h.id,{...h,rank:i+1}]));
   const pitcherIds = new Set(hrPitchers.map(p=>p.id));
-  const top10Ids   = new Set(venues.slice(0,10).map(v=>v.venueId));
+  const top10MinHR = venues.length >= 10 ? venues[9].hr : 0;
+  const top10Ids   = new Set(venues.filter(v => v.hr >= top10MinHR).map(v=>v.venueId));
 
   if (!todayGames.length) {
     container.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);padding:20px 0;">No games scheduled today or schedule not yet available.</div>`;
@@ -5461,9 +5592,328 @@ function renderGamelogTable(data, tc) {
     </table>`;
 }
 
+// ── THREAT TRACKER ────────────────────────────────────────────────────────
+const TRACKER_KEY = 'hrintel_threat_tracker_v1';
+let trackerCurrentDate = null;
+
+// ── Storage helpers ──
+function trackerLoad() {
+  try { return JSON.parse(localStorage.getItem(TRACKER_KEY) || '{}'); } catch { return {}; }
+}
+function trackerSave(data) {
+  try { localStorage.setItem(TRACKER_KEY, JSON.stringify(data)); } catch(e) { console.warn('Tracker save failed', e); }
+}
+function trackerDateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+// ── Capture today's threats ──
+function trackerCaptureToday(alerts) {
+  if (!alerts || !alerts.length) return;
+  const data = trackerLoad();
+  const key  = trackerDateKey(new Date());
+  const existing = data[key];
+
+  // Re-capture if: no entry, more alerts, OR existing data missing venueHR field
+  const needsUpdate = !existing ||
+    existing.threats?.length < alerts.length ||
+    existing.threats?.some(t => t.venueHR === undefined);
+
+  if (!needsUpdate) return;
+
+  data[key] = {
+    date: key,
+    captured: Date.now(),
+    // Preserve existing results if re-capturing
+    threats: alerts.map(a => {
+      const prev = existing?.threats?.find(t =>
+        t.hitterId === (a.hitter?.id || null) &&
+        t.gamePk   === (a.game?.gamePk || null)
+      );
+      return {
+        type:        a.type,
+        hitterName:  a.hitter?.name || '—',
+        hitterId:    a.hitter?.id   || null,
+        hitterHR:    a.hitter?.hr   || 0,
+        hitterRank:  a.hitter?.rank || '—',
+        pitcherName: a.pitcher?.name || 'TBD',
+        pitcherId:   a.pitcher?.id   || null,
+        pitcherHR:   a.pitcher?.hr   || 0,
+        pitcherRank: a.pitcher?.rank || '—',
+        venue:       a.game?.venue      || '—',
+        venueRank:   a.venueRank        || '—',
+        venueHR:     a.venueData?.hr    || 0,
+        gameInfo:    `${a.game?.away?.team||'?'} @ ${a.game?.home?.team||'?'}`,
+        gameTime:    a.game?.time    || '—',
+        gamePk:      a.game?.gamePk  || null,
+        result:      prev?.result    || 'pending',
+        hrCount:     prev?.hrCount   || 0,
+      };
+    })
+  };
+  trackerSave(data);
+}
+
+// ── Check results for a date ──
+async function trackerCheckResults(dateKey) {
+  const data = trackerLoad();
+  if (!data[dateKey]) return;
+  const day = data[dateKey];
+  let changed = false;
+
+  // Only check games that are still pending
+  const pendingThreats = day.threats.filter(t => t.result === 'pending' && t.gamePk);
+  if (!pendingThreats.length) return;
+
+  // Get unique gamePks
+  const gamePks = [...new Set(pendingThreats.map(t => t.gamePk))];
+
+  for (const gamePk of gamePks) {
+    try {
+      const box = await fetchJSON(`${BASE}/game/${gamePk}/boxscore`);
+      const status = box.gameData?.status?.abstractGameState || '';
+      if (status !== 'Final') continue; // only mark results for final games
+
+      // Collect all HR hitters from this game
+      const hrHitterIds = new Set();
+      for (const side of ['away','home']) {
+        const players = box.teams?.[side]?.players || {};
+        for (const [,pd] of Object.entries(players)) {
+          if ((pd.stats?.batting?.homeRuns || 0) > 0) {
+            hrHitterIds.add(pd.person?.id);
+          }
+        }
+      }
+
+      // Update results for threats in this game
+      for (const threat of day.threats) {
+        if (threat.gamePk !== gamePk || threat.result !== 'pending') continue;
+        if (threat.hitterId && hrHitterIds.has(threat.hitterId)) {
+          // Find their HR count
+          for (const side of ['away','home']) {
+            const players = box.teams?.[side]?.players || {};
+            for (const [,pd] of Object.entries(players)) {
+              if (pd.person?.id === threat.hitterId) {
+                threat.hrCount = pd.stats?.batting?.homeRuns || 1;
+              }
+            }
+          }
+          threat.result = 'hit';
+        } else {
+          threat.result = 'miss';
+        }
+        changed = true;
+      }
+    } catch { /* skip failed fetches */ }
+  }
+
+  if (changed) trackerSave(data);
+}
+
+// ── Calculate season stats ──
+function trackerSeasonStats() {
+  const data = trackerLoad();
+  const stats = { triple: { hit:0, total:0 }, double: { hit:0, total:0 } };
+  for (const [,day] of Object.entries(data)) {
+    for (const t of day.threats || []) {
+      if (t.result === 'pending') continue;
+      const key = t.type === 'triple' ? 'triple' : 'double';
+      stats[key].total++;
+      if (t.result === 'hit') stats[key].hit++;
+    }
+  }
+  return stats;
+}
+
+// ── Format pct ──
+function trackerFmtPct(hit, total) {
+  if (!total) return { str: '—', cls: '' };
+  const pct = Math.round(hit / total * 100);
+  const cls = pct >= 60 ? 'hot' : pct >= 40 ? 'warm' : 'cold';
+  return { str: `${pct}%`, cls };
+}
+
+// ── Update season summary UI ──
+function trackerUpdateSeasonSummary() {
+  const s = trackerSeasonStats();
+  const triPct = trackerFmtPct(s.triple.hit, s.triple.total);
+  const dblPct = trackerFmtPct(s.double.hit, s.double.total);
+  const combHit = s.triple.hit + s.double.hit;
+  const combTotal = s.triple.total + s.double.total;
+  const combPct = trackerFmtPct(combHit, combTotal);
+
+  document.getElementById('tsTripleRecord').textContent  = s.triple.total  ? `${s.triple.hit}/${s.triple.total}`   : '—';
+  document.getElementById('tsDoubleRecord').textContent  = s.double.total  ? `${s.double.hit}/${s.double.total}`   : '—';
+  document.getElementById('tsCombinedRecord').textContent = combTotal ? `${combHit}/${combTotal}` : '—';
+
+  const triEl = document.getElementById('tsTriplePct');
+  triEl.textContent = triPct.str; triEl.className = `ts-pct ${triPct.cls}`;
+  const dblEl = document.getElementById('tsDoublePct');
+  dblEl.textContent = dblPct.str; dblEl.className = `ts-pct ${dblPct.cls}`;
+  const combEl = document.getElementById('tsCombinedPct');
+  combEl.textContent = combPct.str; combEl.className = `ts-pct ${combPct.cls}`;
+}
+
+// ── Render tracker body for a date ──
+function trackerRenderDate(dateKey) {
+  const data  = trackerLoad();
+  const day   = data[dateKey];
+  const body  = document.getElementById('trackerBody');
+
+  // Update nav buttons
+  const dates = Object.keys(data).sort();
+  const idx   = dates.indexOf(dateKey);
+  document.getElementById('trackerPrevBtn').disabled = idx <= 0;
+  document.getElementById('trackerNextBtn').disabled = idx >= dates.length - 1 || dateKey === trackerDateKey(new Date());
+
+  // Format date label
+  const d = new Date(dateKey + 'T12:00:00');
+  const todayKey = trackerDateKey(new Date());
+  const label = dateKey === todayKey ? `TODAY — ${d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}` : d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('trackerDateLabel').textContent = label;
+
+  if (!day || !day.threats?.length) {
+    body.innerHTML = `<div class="tracker-empty">No threats were recorded for this date.<br><span style="font-size:10px;opacity:0.6;">Threats are captured automatically when the dashboard loads each day.</span></div>`;
+    return;
+  }
+
+  // Sort: triple first, then double
+  const threats = [...day.threats].sort((a,b) => (a.type==='triple'?0:1) - (b.type==='triple'?0:1));
+
+  // Count results
+  const hits    = threats.filter(t => t.result === 'hit').length;
+  const misses  = threats.filter(t => t.result === 'miss').length;
+  const pending = threats.filter(t => t.result === 'pending').length;
+  const triHits = threats.filter(t => t.type==='triple' && t.result==='hit').length;
+  const triTotal = threats.filter(t => t.type==='triple' && t.result!=='pending').length;
+  const dblHits = threats.filter(t => t.type==='double' && t.result==='hit').length;
+  const dblTotal = threats.filter(t => t.type==='double' && t.result!=='pending').length;
+
+  const cards = threats.map(t => {
+    const isTriple = t.type === 'triple';
+    const badgeClass = isTriple ? 'triple' : 'double';
+    const badgeLabel = isTriple ? '⚡ TRIPLE THREAT' : '🔶 DOUBLE THREAT';
+    const badgeColor = isTriple ? 'var(--accent-gold)' : 'var(--accent-orange)';
+
+    let resultClass = 'pending';
+    let resultContent = '<div class="tracker-result-box">□</div>';
+    if (t.result === 'hit') {
+      resultClass = 'hit';
+      resultContent = `<div class="tracker-result-box">✓</div>${t.hrCount > 1 ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#4ade80;margin-top:3px;text-align:center;">${t.hrCount} HR</div>` : ''}`;
+    } else if (t.result === 'miss') {
+      resultClass = 'miss';
+      resultContent = '<div class="tracker-result-box">✗</div>';
+    }
+
+    return `<div class="tracker-card ${badgeClass}">
+      <div class="tracker-card-body">
+        <div class="tracker-card-game">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:${badgeColor};">${badgeLabel}</span>
+          &nbsp;·&nbsp;${t.gameInfo} · ${t.gameTime}
+        </div>
+        <div class="tracker-card-matchup">
+          <span class="tracker-card-hitter">${t.hitterName}</span>
+          <span class="tracker-card-vs">vs</span>
+          <span class="tracker-card-pitcher">${t.pitcherName}</span>
+        </div>
+        <div class="tracker-card-tags">
+          ${t.hitterRank !== '—' ? `<span class="tag tag-hr">HR Rank #${t.hitterRank} · ${t.hitterHR} HR</span>` : ''}
+          ${t.pitcherRank !== '—' ? `<span class="tag tag-pitcher">Pitcher #${t.pitcherRank} · ${t.pitcherHR} HR allowed</span>` : ''}
+          ${t.venueRank !== '—' ? `<span class="tag tag-venue">📍 ${t.venue} · #${t.venueRank}${t.venueHR ? ` · ${t.venueHR} HRS` : ''}</span>` : `<span class="tag tag-venue">📍 ${t.venue}</span>`}
+        </div>
+      </div>
+      <div class="tracker-result ${resultClass}">${resultContent}</div>
+    </div>`;
+  }).join('');
+
+  // Daily summary
+  const summary = `<div class="tracker-daily-summary">
+    <span class="tracker-daily-label">📅 Daily Results</span>
+    ${triTotal > 0 ? `<span class="tracker-daily-stat">⚡ Triple: <span class="hit-count">${triHits}</span>/<span>${triTotal}</span></span>` : ''}
+    ${dblTotal > 0 ? `<span class="tracker-daily-stat">🔶 Double: <span class="hit-count">${dblHits}</span>/<span>${dblTotal}</span></span>` : ''}
+    ${pending > 0  ? `<span class="tracker-daily-stat">⏳ <span class="pending-count">${pending} pending</span></span>` : ''}
+    ${(hits + misses) > 0 ? `<span class="tracker-daily-stat">🎯 Combined: <span class="hit-count">${hits}</span>/<span class="miss-count">${hits+misses}</span></span>` : ''}
+  </div>`;
+
+  body.innerHTML = cards + summary;
+}
+
+// ── Nav ──
+function trackerNavDate(dir) {
+  const data  = trackerLoad();
+  const dates = Object.keys(data).sort();
+  if (!dates.length) return;
+  const idx = dates.indexOf(trackerCurrentDate);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= dates.length) return;
+  trackerCurrentDate = dates[newIdx];
+  trackerRenderDate(trackerCurrentDate);
+}
+
+function trackerGoToday() {
+  trackerCurrentDate = trackerDateKey(new Date());
+  trackerRenderDate(trackerCurrentDate);
+}
+
+// ── Open / Close ──
+async function openTrackerModal() {
+  document.getElementById('trackerModalOverlay').classList.add('open');
+  // Check results for today before rendering
+  const todayKey = trackerDateKey(new Date());
+  await trackerCheckResults(todayKey);
+  trackerUpdateSeasonSummary();
+  // Navigate to most recent date with data, defaulting to today
+  const data = trackerLoad();
+  const dates = Object.keys(data).sort();
+  trackerCurrentDate = dates.length ? dates[dates.length - 1] : todayKey;
+  trackerRenderDate(trackerCurrentDate);
+}
+
+function closeTrackerModal(e) {
+  if (e && e.target !== document.getElementById('trackerModalOverlay')) return;
+  document.getElementById('trackerModalOverlay').classList.remove('open');
+}
+
 if ('Notification' in window && Notification.permission==='default') Notification.requestPermission();
 initDashboard();
 </script>
+  <!-- THREAT TRACKER MODAL -->
+  <div class="tracker-modal-overlay" id="trackerModalOverlay" onclick="closeTrackerModal(event)">
+    <div class="tracker-modal">
+      <div class="tracker-modal-header">
+        <div class="tracker-modal-title">📊 Threat Tracker</div>
+        <button class="tracker-modal-close" onclick="closeTrackerModal()">✕</button>
+      </div>
+      <!-- Season Summary -->
+      <div class="tracker-season-summary" id="trackerSeasonSummary">
+        <span class="tracker-season-label">Season</span>
+        <div class="tracker-season-stat">
+          <div><div class="ts-label">⚡ Triple Threats</div><div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;"><span class="ts-val" id="tsTripleRecord">—</span><span class="ts-pct" id="tsTriplePct">—</span></div></div>
+        </div>
+        <div class="tracker-season-stat">
+          <div><div class="ts-label">🔶 Double Threats</div><div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;"><span class="ts-val" id="tsDoubleRecord">—</span><span class="ts-pct" id="tsDoublePct">—</span></div></div>
+        </div>
+        <div class="tracker-season-stat">
+          <div><div class="ts-label">🎯 Combined</div><div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;"><span class="ts-val" id="tsCombinedRecord">—</span><span class="ts-pct" id="tsCombinedPct">—</span></div></div>
+        </div>
+      </div>
+      <!-- Date Nav -->
+      <div class="tracker-date-nav">
+        <button class="tracker-nav-btn" id="trackerPrevBtn" onclick="trackerNavDate(-1)">‹</button>
+        <div class="tracker-date-label" id="trackerDateLabel">—</div>
+        <button class="tracker-today-btn" onclick="trackerGoToday()">TODAY</button>
+        <button class="tracker-nav-btn" id="trackerNextBtn" onclick="trackerNavDate(1)">›</button>
+      </div>
+      <!-- Body -->
+      <div class="tracker-body" id="trackerBody">
+        <div class="tracker-empty">No threat data recorded yet for this date.<br>Threats are captured automatically each day when the dashboard loads.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- PLAYER MODAL — must be last element so it sits above all other modals -->
   <div class="mlb-modal-overlay" id="playerModalOverlay" onclick="closePlayerModal(event)" style="z-index:9999;">
     <div class="mlb-modal" id="playerModal" style="max-width:560px;">
