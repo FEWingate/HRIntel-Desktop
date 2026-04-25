@@ -2899,7 +2899,7 @@ async function fetchTodayGames() {
         name: g.teams?.away?.team?.name||'—',
         pitcherId: g.teams?.away?.probablePitcher?.id,
         pitcherName: g.teams?.away?.probablePitcher?.fullName||null,
-        lineup: (g.teams?.away?.lineup||[]).map(p=>p.id),
+        lineup: (g.teams?.away?.lineup||[]).map(p=>({ id: p.id, name: p.fullName||p.name||'' })),
       },
       home: {
         id: g.teams?.home?.team?.id,
@@ -2907,7 +2907,7 @@ async function fetchTodayGames() {
         name: g.teams?.home?.team?.name||'—',
         pitcherId: g.teams?.home?.probablePitcher?.id,
         pitcherName: g.teams?.home?.probablePitcher?.fullName||null,
-        lineup: (g.teams?.home?.lineup||[]).map(p=>p.id),
+        lineup: (g.teams?.home?.lineup||[]).map(p=>({ id: p.id, name: p.fullName||p.name||'' })),
       },
     };
   });
@@ -2957,8 +2957,8 @@ function analyzeMatchups() {
     const venueRank     = venueData ? venues.indexOf(venueData)+1 : null;
 
     const pairs = [
-      { lineupIds: game.away.lineup, pitcherId: game.home.pitcherId, pitcherName: game.home.pitcherName, battingTeam: game.away.team },
-      { lineupIds: game.home.lineup, pitcherId: game.away.pitcherId, pitcherName: game.away.pitcherName, battingTeam: game.home.team },
+      { lineupIds: (game.away.lineup||[]).map(p=>p.id||p), pitcherId: game.home.pitcherId, pitcherName: game.home.pitcherName, battingTeam: game.away.team },
+      { lineupIds: (game.home.lineup||[]).map(p=>p.id||p), pitcherId: game.away.pitcherId, pitcherName: game.away.pitcherName, battingTeam: game.home.team },
     ];
 
     for (const pair of pairs) {
@@ -6014,27 +6014,47 @@ async function buildMatchupsList() {
   const matchups = [];
   const seen = new Set();
 
+  // Build a map of team → pitcherId/name for today
+  const teamToPitcher = {};
   for (const game of todayGames) {
+    if (game.away?.pitcherId) teamToPitcher[game.away.team] = { id: game.away.pitcherId, name: game.away.pitcherName || 'TBD', gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time };
+    if (game.home?.pitcherId) teamToPitcher[game.home.team] = { id: game.home.pitcherId, name: game.home.pitcherName || 'TBD', gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time };
+  }
+
+  // Build opposing pitcher map — for each team, find the opposing team's pitcher
+  const teamToOpposingPitcher = {};
+  for (const game of todayGames) {
+    // Away team faces home pitcher
+    if (game.home?.pitcherId) {
+      teamToOpposingPitcher[game.away.team] = { id: game.home.pitcherId, name: game.home.pitcherName || 'TBD', gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time };
+    }
+    // Home team faces away pitcher
+    if (game.away?.pitcherId) {
+      teamToOpposingPitcher[game.home.team] = { id: game.away.pitcherId, name: game.away.pitcherName || 'TBD', gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time };
+    }
+  }
+
+  for (const game of todayGames) {
+    // Get confirmed lineup or fall back to top hitters on that specific team
+    const getTeamBatters = (teamAbbr, lineup) => {
+      if (lineup && lineup.length > 0) {
+        // Lineup is now [{id, name}] — enrich name from hitters if missing
+        return lineup.map(p => {
+          const id = p.id || p;
+          const found = hitters.find(h => h.id === id);
+          return { id, name: p.name || found?.name || '' };
+        }).filter(p => p.id);
+      }
+      // Fallback: top hitters on this specific team
+      return hitters.filter(h => h.team === teamAbbr).slice(0, 9).map(h => ({ id: h.id, name: h.name }));
+    };
+
+    const awayBatters = getTeamBatters(game.away?.team, game.away?.lineup);
+    const homeBatters = getTeamBatters(game.home?.team, game.home?.lineup);
     const homePitcherId   = game.home?.pitcherId;
     const awayPitcherId   = game.away?.pitcherId;
     const homePitcherName = game.home?.pitcherName || 'TBD';
     const awayPitcherName = game.away?.pitcherName || 'TBD';
-
-    // Get batters from confirmed lineup only — no cross-game fallback
-    const awayLineup = game.away?.lineup || [];
-    const homeLineup = game.home?.lineup || [];
-
-    // If no lineup, use top hitters specifically on THAT team only
-    const getTeamBatters = (teamAbbr, lineup) => {
-      if (lineup && lineup.length > 0) return lineup;
-      return hitters
-        .filter(h => h.team === teamAbbr)
-        .slice(0, 9)
-        .map(h => ({ id: h.id, name: h.name }));
-    };
-
-    const awayBatters = getTeamBatters(game.away?.team, awayLineup);
-    const homeBatters = getTeamBatters(game.home?.team, homeLineup);
 
     // Away batters vs home pitcher
     if (homePitcherId) {
@@ -6064,6 +6084,20 @@ async function buildMatchupsList() {
       }
     }
   }
+
+  // Also check ALL top 25 hitters against their actual opposing pitcher today
+  for (const hitter of hitters) {
+    const opp = teamToOpposingPitcher[hitter.team];
+    if (!opp?.id) continue;
+    const key = `${hitter.id}-${opp.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const h2h = await fetchH2H(hitter.id, opp.id);
+    if (h2h && h2h.ab >= 3) {
+      matchups.push({ ...h2h, hitterId: hitter.id, hitterName: hitter.name, hitterTeam: hitter.team, pitcherId: opp.id, pitcherName: opp.name, pitcherTeam: '—', gameInfo: opp.gameInfo, gameTime: opp.gameTime });
+    }
+  }
+
   return matchups;
 }
 
