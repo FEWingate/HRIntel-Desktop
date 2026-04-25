@@ -2913,6 +2913,14 @@ async function fetchTodayGames() {
   });
   const pitcherIds = [...new Set(list.flatMap(g=>[g.away.pitcherId,g.home.pitcherId]).filter(Boolean))];
   await Promise.all(pitcherIds.map(id=>fetchHandedness(id)));
+
+  // Build global player name map from all lineup data
+  window._playerNameMap = window._playerNameMap || {};
+  for (const g of list) {
+    for (const p of [...(g.away?.lineup||[]), ...(g.home?.lineup||[])]) {
+      if (p.id && p.name) window._playerNameMap[p.id] = p.name;
+    }
+  }
   return list;
 }
 
@@ -6022,10 +6030,30 @@ async function buildMatchupsList() {
     if (!homePitcherId && !awayPitcherId) continue;
 
     // Start with schedule lineup (already hydrated)
-    let awayBatters = (game.away?.lineup || []).filter(p => p.id);
-    let homeBatters = (game.home?.lineup || []).filter(p => p.id);
+    let awayBatters = (game.away?.lineup || []).filter(p => p.id).map(p => ({
+      id: p.id,
+      name: p.name || window._playerNameMap?.[p.id] || hitters.find(h=>h.id===p.id)?.name || ''
+    }));
+    let homeBatters = (game.home?.lineup || []).filter(p => p.id).map(p => ({
+      id: p.id,
+      name: p.name || window._playerNameMap?.[p.id] || hitters.find(h=>h.id===p.id)?.name || ''
+    }));
 
-    // If schedule lineup is empty, try boxscore
+    // Fetch names for any players still missing them
+    const allBattersNeedingNames = [...awayBatters, ...homeBatters].filter(p => !p.name && p.id);
+    if (allBattersNeedingNames.length) {
+      const ids = allBattersNeedingNames.map(p => p.id).join(',');
+      try {
+        const pd = await fetchJSON(`${BASE}/people?personIds=${ids}&hydrate=currentTeam`);
+        for (const person of pd.people || []) {
+          window._playerNameMap[person.id] = person.fullName;
+          // Update batters arrays
+          for (const b of [...awayBatters, ...homeBatters]) {
+            if (b.id === person.id) b.name = person.fullName;
+          }
+        }
+      } catch {}
+    }
     if (!awayBatters.length || !homeBatters.length) {
       try {
         const box = await fetchJSON(`${BASE}/game/${game.gamePk}/boxscore`);
