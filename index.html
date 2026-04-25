@@ -6009,7 +6009,7 @@ async function fetchH2H(batterId, pitcherId) {
   } catch { _h2hCache[key] = null; return null; }
 }
 
-// Build matchup list from today's games using full boxscore lineups
+// Build matchup list from today's games using full lineups
 async function buildMatchupsList() {
   const matchups = [];
   const seen = new Set();
@@ -6021,42 +6021,36 @@ async function buildMatchupsList() {
     const awayPitcherName = game.away?.pitcherName || 'TBD';
     if (!homePitcherId && !awayPitcherId) continue;
 
-    // Fetch boxscore to get full batting orders
-    let awayBatters = [], homeBatters = [];
-    try {
-      const box = await fetchJSON(`${BASE}/game/${game.gamePk}/boxscore`);
-      const extractBatters = (side) => {
-        const players = box.teams?.[side]?.players || {};
-        const order   = box.teams?.[side]?.battingOrder || [];
-        if (order.length > 0) {
-          return order.map(id => {
-            const pd = players[`ID${id}`];
-            return { id, name: pd?.person?.fullName || '' };
-          }).filter(p => p.name);
-        }
-        // Fall back to all players who had at bats
-        return Object.values(players)
-          .filter(pd => (pd.stats?.batting?.atBats || 0) > 0 || pd.gameStatus?.isCurrentBatter)
-          .map(pd => ({ id: pd.person?.id, name: pd.person?.fullName || '' }))
-          .filter(p => p.id && p.name);
-      };
-      awayBatters = extractBatters('away');
-      homeBatters = extractBatters('home');
-    } catch {}
+    // Start with schedule lineup (already hydrated)
+    let awayBatters = (game.away?.lineup || []).filter(p => p.id);
+    let homeBatters = (game.home?.lineup || []).filter(p => p.id);
 
-    // If boxscore failed, fall back to lineup on game object or team hitters
-    if (!awayBatters.length) {
-      const lineup = game.away?.lineup || [];
-      awayBatters = lineup.length
-        ? lineup.map(p => ({ id: p.id||p, name: p.name || hitters.find(h=>h.id===(p.id||p))?.name || '' }))
-        : hitters.filter(h => h.team === game.away?.team).slice(0,9).map(h=>({id:h.id,name:h.name}));
+    // If schedule lineup is empty, try boxscore
+    if (!awayBatters.length || !homeBatters.length) {
+      try {
+        const box = await fetchJSON(`${BASE}/game/${game.gamePk}/boxscore`);
+        const extractBatters = (side) => {
+          const players = box.teams?.[side]?.players || {};
+          const order   = box.teams?.[side]?.battingOrder || [];
+          if (order.length > 0) {
+            return order.map(id => {
+              const pd = players[`ID${id}`];
+              return { id, name: pd?.person?.fullName || '' };
+            }).filter(p => p.name);
+          }
+          return Object.values(players)
+            .filter(pd => (pd.stats?.batting?.atBats || 0) > 0)
+            .map(pd => ({ id: pd.person?.id, name: pd.person?.fullName || '' }))
+            .filter(p => p.id && p.name);
+        };
+        if (!awayBatters.length) awayBatters = extractBatters('away');
+        if (!homeBatters.length) homeBatters = extractBatters('home');
+      } catch {}
     }
-    if (!homeBatters.length) {
-      const lineup = game.home?.lineup || [];
-      homeBatters = lineup.length
-        ? lineup.map(p => ({ id: p.id||p, name: p.name || hitters.find(h=>h.id===(p.id||p))?.name || '' }))
-        : hitters.filter(h => h.team === game.home?.team).slice(0,9).map(h=>({id:h.id,name:h.name}));
-    }
+
+    // Final fallback — top hitters on that team
+    if (!awayBatters.length) awayBatters = hitters.filter(h => h.team === game.away?.team).slice(0,9).map(h=>({id:h.id,name:h.name}));
+    if (!homeBatters.length) homeBatters = hitters.filter(h => h.team === game.home?.team).slice(0,9).map(h=>({id:h.id,name:h.name}));
 
     // Away batters vs home pitcher
     if (homePitcherId) {
