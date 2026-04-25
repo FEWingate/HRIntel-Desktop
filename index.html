@@ -6014,26 +6014,27 @@ async function buildMatchupsList() {
   const matchups = [];
   const seen = new Set();
 
-  // Use ALL hitters for fallback (not just top 25)
-  const allKnownHitters = hitters.length > 0 ? hitters : [];
-
   for (const game of todayGames) {
-    const homePitcherId   = game.home?.probablePitcherId || game.home?.pitcherId;
-    const awayPitcherId   = game.away?.probablePitcherId || game.away?.pitcherId;
-    const homePitcherName = game.home?.pitcherName || game.home?.probablePitcherName || 'TBD';
-    const awayPitcherName = game.away?.pitcherName || game.away?.probablePitcherName || 'TBD';
+    const homePitcherId   = game.home?.pitcherId;
+    const awayPitcherId   = game.away?.pitcherId;
+    const homePitcherName = game.home?.pitcherName || 'TBD';
+    const awayPitcherName = game.away?.pitcherName || 'TBD';
 
-    // Get batters — use lineup if available, otherwise top hitters for that team
+    // Get batters from confirmed lineup only — no cross-game fallback
+    const awayLineup = game.away?.lineup || [];
+    const homeLineup = game.home?.lineup || [];
+
+    // If no lineup, use top hitters specifically on THAT team only
     const getTeamBatters = (teamAbbr, lineup) => {
       if (lineup && lineup.length > 0) return lineup;
-      const teamHitters = allKnownHitters.filter(h => h.team === teamAbbr);
-      // If no match by team abbr, use all top hitters
-      return (teamHitters.length > 0 ? teamHitters : allKnownHitters.slice(0, 25))
-        .slice(0, 12).map(h => ({ id: h.id, name: h.name }));
+      return hitters
+        .filter(h => h.team === teamAbbr)
+        .slice(0, 9)
+        .map(h => ({ id: h.id, name: h.name }));
     };
 
-    const awayBatters = getTeamBatters(game.away?.team, game.away?.lineup);
-    const homeBatters = getTeamBatters(game.home?.team, game.home?.lineup);
+    const awayBatters = getTeamBatters(game.away?.team, awayLineup);
+    const homeBatters = getTeamBatters(game.home?.team, homeLineup);
 
     // Away batters vs home pitcher
     if (homePitcherId) {
@@ -6085,8 +6086,9 @@ function h2hStrip(h2h, pitcherName) {
   const ops   = h2h.ops;
   const avgVal = h2h.avg;
   let cls = 'white';
-  if (avgVal >= 0.350 || h2h.hr >= 2) cls = 'gold';
-  else if (avgVal < 0.220) cls = 'red';
+  if (avgVal >= 0.350 || h2h.hr >= 2 || ops >= 0.900) cls = 'gold';
+  else if (avgVal >= 0.300 || ops >= 0.800) cls = 'gold';
+  else if (avgVal < 0.220 || ops < 0.700) cls = 'red';
   const avgStr = avgVal.toFixed(3).replace('0.','.');
   const opsStr = ops.toFixed(3).replace('0.','.');
   const label  = cls === 'gold' ? '🔥 H2H EDGE' : cls === 'red' ? '🧊 H2H COLD' : '⚔ H2H';
@@ -6108,7 +6110,7 @@ function renderMatchupRow(m, type) {
   const ops    = m.ops || 0;
   const avgStr = (m.avg||0).toFixed(3).replace('0.','.');
   const opsStr = ops.toFixed(3).replace('0.','.');
-  const opsCls = ops >= 0.800 ? 'hot' : ops <= 0.600 ? 'cold' : 'warm';
+  const opsCls = ops >= 0.900 ? 'hot' : ops >= 0.800 ? 'hot' : ops < 0.700 ? 'cold' : 'warm';
   const avgCls = m.avg >= 0.350 ? 'gold' : m.avg < 0.220 ? 'red' : '';
   return `<div class="matchup-row ${type}" onclick="openPlayerModal(${m.hitterId},'${(m.hitterName||'').replace(/'/g,"\\'")}','${m.hitterTeam}')">
     <div>
@@ -6134,11 +6136,11 @@ function renderMatchupRow(m, type) {
 
 function renderMatchupsUI() {
   const filtered = _matchupsData.filter(m => m.ab >= _matchupsMinAB);
-  // Split into hot and cold — mutually exclusive by OPS threshold
-  const hot  = filtered.filter(m => m.ops >= 0.750).sort((a,b) => b.ops - a.ops).slice(0,20);
-  const cold = filtered.filter(m => m.ops <  0.550).sort((a,b) => a.ops - b.ops).slice(0,20);
-  document.getElementById('hotMatchupsContainer').innerHTML  = hot.length  ? hot.map(m=>renderMatchupRow(m,'hot')).join('')  : '<div class="matchup-loading">No hot matchups meet the minimum AB threshold.</div>';
-  document.getElementById('coldMatchupsContainer').innerHTML = cold.length ? cold.map(m=>renderMatchupRow(m,'cold')).join('') : '<div class="matchup-loading">No cold matchups meet the minimum AB threshold.</div>';
+  // Hot = .800+ OPS (Good/All-Star caliber), Cold = below .700 (below average)
+  const hot  = filtered.filter(m => m.ops >= 0.800).sort((a,b) => b.ops - a.ops).slice(0,20);
+  const cold = filtered.filter(m => m.ops <  0.700).sort((a,b) => a.ops - b.ops).slice(0,20);
+  document.getElementById('hotMatchupsContainer').innerHTML  = hot.length  ? hot.map(m=>renderMatchupRow(m,'hot')).join('')  : '<div class="matchup-loading">No hot matchups (.800+ OPS) found.</div>';
+  document.getElementById('coldMatchupsContainer').innerHTML = cold.length ? cold.map(m=>renderMatchupRow(m,'cold')).join('') : '<div class="matchup-loading">No cold matchups (below .700 OPS) found.</div>';
 }
 
 function setMatchupMinAB(n, btn) {
