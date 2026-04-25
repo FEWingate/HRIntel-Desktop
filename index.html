@@ -2917,14 +2917,7 @@ async function fetchTodayGames() {
 }
 
 // ── H2H ─────────────────────────────────────────────────────────────
-async function fetchH2H(pitcherId, batterId) {
-  try {
-    const d = await fetchJSON(`${BASE}/people/${batterId}/stats?stats=vsPlayer&opposingPlayerId=${pitcherId}&group=hitting&sportId=1`);
-    const s = d.stats?.[0]?.splits?.[0]?.stat;
-    if (!s) return null;
-    return { ab: s.atBats||0, hr: s.homeRuns||0, avg: s.avg||'.000' };
-  } catch { return null; }
-}
+// fetchH2H defined below in Matchups section with full caching and stat line
 
 // ── TEAM HR LEADERS ──────────────────────────────────────────────────
 async function fetchTeamHRLeaders(teamId) {
@@ -3443,7 +3436,7 @@ async function renderGames(alerts, noHRAlerts) {
   for (const a of alerts) {
     if (!a.hitter?.id || !a.pitcher?.id) continue;
     const key = `${a.game.gamePk}-${a.hitter.id}-${a.pitcher.id}`;
-    if (!h2hMap[key]) h2hMap[key] = fetchH2H(a.pitcher.id, a.hitter.id);
+    if (!h2hMap[key]) h2hMap[key] = fetchH2H(a.hitter.id, a.pitcher.id);
   }
   const h2hKeys = Object.keys(h2hMap);
   const h2hVals = await Promise.all(Object.values(h2hMap));
@@ -5982,7 +5975,7 @@ function closeTrackerModal(e) {
 
 // ── MATCHUPS & H2H ───────────────────────────────────────────────────────
 let _matchupsData   = []; // cached full matchup list
-let _matchupsMinAB  = 10;
+let _matchupsMinAB  = 5;
 const H2H_CACHE_KEY = 'hrintel_h2h_cache_v1';
 let _h2hCache = (() => { try { return JSON.parse(localStorage.getItem(H2H_CACHE_KEY)||'{}'); } catch { return {}; } })();
 
@@ -6021,35 +6014,51 @@ async function buildMatchupsList() {
   const matchups = [];
   const seen = new Set();
 
+  // Use ALL hitters for fallback (not just top 25)
+  const allKnownHitters = hitters.length > 0 ? hitters : [];
+
   for (const game of todayGames) {
-    const awayLineup = game.away?.lineup || [];
-    const homeLineup = game.home?.lineup || [];
-    const awayPitcherId = game.away?.pitcherId;
-    const homePitcherId = game.home?.pitcherId;
-    const awayPitcherName = game.away?.pitcherName || 'TBD';
-    const homePitcherName = game.home?.pitcherName || 'TBD';
+    const homePitcherId   = game.home?.probablePitcherId || game.home?.pitcherId;
+    const awayPitcherId   = game.away?.probablePitcherId || game.away?.pitcherId;
+    const homePitcherName = game.home?.pitcherName || game.home?.probablePitcherName || 'TBD';
+    const awayPitcherName = game.away?.pitcherName || game.away?.probablePitcherName || 'TBD';
+
+    // Get batters — use lineup if available, otherwise top hitters for that team
+    const getTeamBatters = (teamAbbr, lineup) => {
+      if (lineup && lineup.length > 0) return lineup;
+      const teamHitters = allKnownHitters.filter(h => h.team === teamAbbr);
+      // If no match by team abbr, use all top hitters
+      return (teamHitters.length > 0 ? teamHitters : allKnownHitters.slice(0, 25))
+        .slice(0, 12).map(h => ({ id: h.id, name: h.name }));
+    };
+
+    const awayBatters = getTeamBatters(game.away?.team, game.away?.lineup);
+    const homeBatters = getTeamBatters(game.home?.team, game.home?.lineup);
 
     // Away batters vs home pitcher
     if (homePitcherId) {
-      for (const batter of homeLineup.length ? homeLineup : []) {
+      for (const batter of awayBatters) {
+        if (!batter?.id) continue;
         const key = `${batter.id}-${homePitcherId}`;
         if (seen.has(key)) continue;
         seen.add(key);
         const h2h = await fetchH2H(batter.id, homePitcherId);
-        if (h2h && h2h.ab >= 5) {
-          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.home.team, pitcherId: homePitcherId, pitcherName: homePitcherName, pitcherTeam: game.away.team, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
+        if (h2h && h2h.ab >= 3) {
+          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.away.team, pitcherId: homePitcherId, pitcherName: homePitcherName, pitcherTeam: game.home.team, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
         }
       }
     }
+
     // Home batters vs away pitcher
     if (awayPitcherId) {
-      for (const batter of awayLineup.length ? awayLineup : []) {
+      for (const batter of homeBatters) {
+        if (!batter?.id) continue;
         const key = `${batter.id}-${awayPitcherId}`;
         if (seen.has(key)) continue;
         seen.add(key);
         const h2h = await fetchH2H(batter.id, awayPitcherId);
-        if (h2h && h2h.ab >= 5) {
-          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.away.team, pitcherId: awayPitcherId, pitcherName: awayPitcherName, pitcherTeam: game.home.team, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
+        if (h2h && h2h.ab >= 3) {
+          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.home.team, pitcherId: awayPitcherId, pitcherName: awayPitcherName, pitcherTeam: game.away.team, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
         }
       }
     }
@@ -6140,9 +6149,10 @@ function setMatchupMinAB(n, btn) {
 
 async function openMatchupsModal() {
   document.getElementById('matchupsModalOverlay').classList.add('open');
-  if (_matchupsData.length) { renderMatchupsUI(); return; }
-  document.getElementById('hotMatchupsContainer').innerHTML  = '<div class="matchup-loading">Fetching H2H data from MLB Stats API...</div>';
-  document.getElementById('coldMatchupsContainer').innerHTML = '<div class="matchup-loading">This may take a moment...</div>';
+  // Always rebuild — pitchers/lineups may have updated
+  _matchupsData = [];
+  document.getElementById('hotMatchupsContainer').innerHTML  = '<div class="matchup-loading">Fetching H2H data — using top hitters vs today\'s confirmed starters...</div>';
+  document.getElementById('coldMatchupsContainer').innerHTML = '<div class="matchup-loading">This may take 15-30 seconds...</div>';
   _matchupsData = await buildMatchupsList();
   renderMatchupsUI();
 }
@@ -6164,7 +6174,8 @@ initDashboard();
       </div>
       <div class="matchups-filter-bar">
         <span class="matchups-filter-label">MIN AB:</span>
-        <button class="matchups-ab-btn active" onclick="setMatchupMinAB(10,this)">10+</button>
+        <button class="matchups-ab-btn active" onclick="setMatchupMinAB(5,this)">5+</button>
+        <button class="matchups-ab-btn" onclick="setMatchupMinAB(10,this)">10+</button>
         <button class="matchups-ab-btn" onclick="setMatchupMinAB(15,this)">15+</button>
         <button class="matchups-ab-btn" onclick="setMatchupMinAB(20,this)">20+</button>
         <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:auto;" id="matchupsUpdated">Today's confirmed starters only</span>
