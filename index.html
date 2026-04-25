@@ -6134,10 +6134,11 @@ function renderMatchupRow(m, type) {
 
 function renderMatchupsUI() {
   const filtered = _matchupsData.filter(m => m.ab >= _matchupsMinAB);
-  const hot  = [...filtered].sort((a,b) => b.ops - a.ops).slice(0,20);
-  const cold = [...filtered].sort((a,b) => a.ops - b.ops).slice(0,20);
-  document.getElementById('hotMatchupsContainer').innerHTML  = hot.length  ? hot.map(m=>renderMatchupRow(m,'hot')).join('')  : '<div class="matchup-loading">No matchups meet the minimum AB threshold.</div>';
-  document.getElementById('coldMatchupsContainer').innerHTML = cold.length ? cold.map(m=>renderMatchupRow(m,'cold')).join('') : '<div class="matchup-loading">No matchups meet the minimum AB threshold.</div>';
+  // Split into hot and cold — mutually exclusive by OPS threshold
+  const hot  = filtered.filter(m => m.ops >= 0.750).sort((a,b) => b.ops - a.ops).slice(0,20);
+  const cold = filtered.filter(m => m.ops <  0.550).sort((a,b) => a.ops - b.ops).slice(0,20);
+  document.getElementById('hotMatchupsContainer').innerHTML  = hot.length  ? hot.map(m=>renderMatchupRow(m,'hot')).join('')  : '<div class="matchup-loading">No hot matchups meet the minimum AB threshold.</div>';
+  document.getElementById('coldMatchupsContainer').innerHTML = cold.length ? cold.map(m=>renderMatchupRow(m,'cold')).join('') : '<div class="matchup-loading">No cold matchups meet the minimum AB threshold.</div>';
 }
 
 function setMatchupMinAB(n, btn) {
