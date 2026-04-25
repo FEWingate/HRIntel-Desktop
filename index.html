@@ -5994,12 +5994,12 @@ function h2hCacheSave() {
 // Fetch H2H stats for a single batter vs pitcher
 async function fetchH2H(batterId, pitcherId) {
   const key = `${batterId}-${pitcherId}`;
-  if (_h2hCache[key] !== undefined) return _h2hCache[key];
+  if (_h2hCache[key] !== undefined && _h2hCache[key] !== null) return _h2hCache[key];
   try {
     const url = `${BASE}/people/${batterId}/stats?stats=vsPlayer&group=hitting&opposingPlayerId=${pitcherId}&sportId=1`;
     const d = await fetchJSON(url);
     const splits = d?.stats?.[0]?.splits || [];
-    if (!splits.length) { _h2hCache[key] = null; return null; }
+    if (!splits.length) { return null; } // no career H2H data — don't cache
     const s = splits[0].stat;
     const result = {
       ab:  s.atBats        ?? 0,
@@ -6014,7 +6014,7 @@ async function fetchH2H(batterId, pitcherId) {
     _h2hCache[key] = result;
     h2hCacheSave();
     return result;
-  } catch { _h2hCache[key] = null; return null; }
+  } catch { return null; } // don't cache errors
 }
 
 // Build matchup list using full rosters — matches Rotowire's approach
