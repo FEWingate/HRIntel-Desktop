@@ -3166,7 +3166,7 @@ function renderAlerts(alerts, skipEnrich=false) {
     c.innerHTML = `<div class="no-alerts">✓ No threat matchups detected yet. Check back once lineups post (~3hrs before first pitch).</div>`;
     return;
   }
-  // Capture today's threats for the tracker (once per day)
+  // Capture today's threats for the tracker (only on initial render, not H2H re-render)
   if (!skipEnrich) trackerCaptureToday(alerts);
   c.innerHTML = alerts.map(a=>{
     const cls         = a.type==='triple' ? 'alert-triple' : 'alert-double';
@@ -5710,9 +5710,19 @@ function trackerCaptureToday(alerts) {
   const key  = trackerDateKey(new Date());
   const existing = data[key];
 
-  // Re-capture if: no entry, more alerts, OR existing data missing venueHR field
+  // Deduplicate alerts by hitterId + gamePk + type
+  const uniqueAlerts = [];
+  const seenKeys = new Set();
+  for (const a of alerts) {
+    const uKey = `${a.hitter?.id||'?'}-${a.game?.gamePk||'?'}-${a.type}`;
+    if (seenKeys.has(uKey)) continue;
+    seenKeys.add(uKey);
+    uniqueAlerts.push(a);
+  }
+
+  // Re-capture if: no entry, more unique alerts, OR existing data missing venueHR field
   const needsUpdate = !existing ||
-    existing.threats?.length < alerts.length ||
+    existing.threats?.length < uniqueAlerts.length ||
     existing.threats?.some(t => t.venueHR === undefined);
 
   if (!needsUpdate) return;
@@ -5720,11 +5730,11 @@ function trackerCaptureToday(alerts) {
   data[key] = {
     date: key,
     captured: Date.now(),
-    // Preserve existing results if re-capturing
-    threats: alerts.map(a => {
+    threats: uniqueAlerts.map(a => {
       const prev = existing?.threats?.find(t =>
         t.hitterId === (a.hitter?.id || null) &&
-        t.gamePk   === (a.game?.gamePk || null)
+        t.gamePk   === (a.game?.gamePk || null) &&
+        t.type     === a.type
       );
       return {
         type:        a.type,
