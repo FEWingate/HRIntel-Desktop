@@ -6009,52 +6009,54 @@ async function fetchH2H(batterId, pitcherId) {
   } catch { _h2hCache[key] = null; return null; }
 }
 
-// Build matchup list from today's games
+// Build matchup list from today's games using full boxscore lineups
 async function buildMatchupsList() {
   const matchups = [];
   const seen = new Set();
 
-  // Build a map of team → pitcherId/name for today
-  const teamToPitcher = {};
   for (const game of todayGames) {
-    if (game.away?.pitcherId) teamToPitcher[game.away.team] = { id: game.away.pitcherId, name: game.away.pitcherName || 'TBD', gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time };
-    if (game.home?.pitcherId) teamToPitcher[game.home.team] = { id: game.home.pitcherId, name: game.home.pitcherName || 'TBD', gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time };
-  }
-
-  // Build opposing pitcher map — for each team, find the opposing team's pitcher
-  const teamToOpposingPitcher = {};
-  for (const game of todayGames) {
-    // Away team faces home pitcher
-    if (game.home?.pitcherId) {
-      teamToOpposingPitcher[game.away.team] = { id: game.home.pitcherId, name: game.home.pitcherName || 'TBD', gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time };
-    }
-    // Home team faces away pitcher
-    if (game.away?.pitcherId) {
-      teamToOpposingPitcher[game.home.team] = { id: game.away.pitcherId, name: game.away.pitcherName || 'TBD', gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time };
-    }
-  }
-
-  for (const game of todayGames) {
-    // Get confirmed lineup or fall back to top hitters on that specific team
-    const getTeamBatters = (teamAbbr, lineup) => {
-      if (lineup && lineup.length > 0) {
-        // Lineup is now [{id, name}] — enrich name from hitters if missing
-        return lineup.map(p => {
-          const id = p.id || p;
-          const found = hitters.find(h => h.id === id);
-          return { id, name: p.name || found?.name || '' };
-        }).filter(p => p.id);
-      }
-      // Fallback: top hitters on this specific team
-      return hitters.filter(h => h.team === teamAbbr).slice(0, 9).map(h => ({ id: h.id, name: h.name }));
-    };
-
-    const awayBatters = getTeamBatters(game.away?.team, game.away?.lineup);
-    const homeBatters = getTeamBatters(game.home?.team, game.home?.lineup);
     const homePitcherId   = game.home?.pitcherId;
     const awayPitcherId   = game.away?.pitcherId;
     const homePitcherName = game.home?.pitcherName || 'TBD';
     const awayPitcherName = game.away?.pitcherName || 'TBD';
+    if (!homePitcherId && !awayPitcherId) continue;
+
+    // Fetch boxscore to get full batting orders
+    let awayBatters = [], homeBatters = [];
+    try {
+      const box = await fetchJSON(`${BASE}/game/${game.gamePk}/boxscore`);
+      const extractBatters = (side) => {
+        const players = box.teams?.[side]?.players || {};
+        const order   = box.teams?.[side]?.battingOrder || [];
+        if (order.length > 0) {
+          return order.map(id => {
+            const pd = players[`ID${id}`];
+            return { id, name: pd?.person?.fullName || '' };
+          }).filter(p => p.name);
+        }
+        // Fall back to all players who had at bats
+        return Object.values(players)
+          .filter(pd => (pd.stats?.batting?.atBats || 0) > 0 || pd.gameStatus?.isCurrentBatter)
+          .map(pd => ({ id: pd.person?.id, name: pd.person?.fullName || '' }))
+          .filter(p => p.id && p.name);
+      };
+      awayBatters = extractBatters('away');
+      homeBatters = extractBatters('home');
+    } catch {}
+
+    // If boxscore failed, fall back to lineup on game object or team hitters
+    if (!awayBatters.length) {
+      const lineup = game.away?.lineup || [];
+      awayBatters = lineup.length
+        ? lineup.map(p => ({ id: p.id||p, name: p.name || hitters.find(h=>h.id===(p.id||p))?.name || '' }))
+        : hitters.filter(h => h.team === game.away?.team).slice(0,9).map(h=>({id:h.id,name:h.name}));
+    }
+    if (!homeBatters.length) {
+      const lineup = game.home?.lineup || [];
+      homeBatters = lineup.length
+        ? lineup.map(p => ({ id: p.id||p, name: p.name || hitters.find(h=>h.id===(p.id||p))?.name || '' }))
+        : hitters.filter(h => h.team === game.home?.team).slice(0,9).map(h=>({id:h.id,name:h.name}));
+    }
 
     // Away batters vs home pitcher
     if (homePitcherId) {
@@ -6065,7 +6067,7 @@ async function buildMatchupsList() {
         seen.add(key);
         const h2h = await fetchH2H(batter.id, homePitcherId);
         if (h2h && h2h.ab >= 3) {
-          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.away.team, pitcherId: homePitcherId, pitcherName: homePitcherName, pitcherTeam: game.home.team, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
+          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.away.team, pitcherId: homePitcherId, pitcherName: homePitcherName, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
         }
       }
     }
@@ -6079,25 +6081,11 @@ async function buildMatchupsList() {
         seen.add(key);
         const h2h = await fetchH2H(batter.id, awayPitcherId);
         if (h2h && h2h.ab >= 3) {
-          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.home.team, pitcherId: awayPitcherId, pitcherName: awayPitcherName, pitcherTeam: game.away.team, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
+          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.home.team, pitcherId: awayPitcherId, pitcherName: awayPitcherName, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
         }
       }
     }
   }
-
-  // Also check ALL top 25 hitters against their actual opposing pitcher today
-  for (const hitter of hitters) {
-    const opp = teamToOpposingPitcher[hitter.team];
-    if (!opp?.id) continue;
-    const key = `${hitter.id}-${opp.id}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const h2h = await fetchH2H(hitter.id, opp.id);
-    if (h2h && h2h.ab >= 3) {
-      matchups.push({ ...h2h, hitterId: hitter.id, hitterName: hitter.name, hitterTeam: hitter.team, pitcherId: opp.id, pitcherName: opp.name, pitcherTeam: '—', gameInfo: opp.gameInfo, gameTime: opp.gameTime });
-    }
-  }
-
   return matchups;
 }
 
@@ -6170,11 +6158,15 @@ function renderMatchupRow(m, type) {
 
 function renderMatchupsUI() {
   const filtered = _matchupsData.filter(m => m.ab >= _matchupsMinAB);
-  // Hot = .800+ OPS (Good/All-Star caliber), Cold = below .700 (below average)
-  const hot  = filtered.filter(m => m.ops >= 0.800).sort((a,b) => b.ops - a.ops).slice(0,20);
-  const cold = filtered.filter(m => m.ops <  0.700).sort((a,b) => a.ops - b.ops).slice(0,20);
-  document.getElementById('hotMatchupsContainer').innerHTML  = hot.length  ? hot.map(m=>renderMatchupRow(m,'hot')).join('')  : '<div class="matchup-loading">No hot matchups (.800+ OPS) found.</div>';
-  document.getElementById('coldMatchupsContainer').innerHTML = cold.length ? cold.map(m=>renderMatchupRow(m,'cold')).join('') : '<div class="matchup-loading">No cold matchups (below .700 OPS) found.</div>';
+  // Match Rotowire OR logic: Hot = AVG > .400 OR OPS > .850 OR HR > 3
+  // Cold = AVG < .200 OR OPS < .500 OR HR < 0.15 (essentially 0 HR in small sample)
+  const hot  = filtered.filter(m => m.avg >= 0.400 || m.ops >= 0.850 || m.hr >= 3)
+                        .sort((a,b) => b.ops - a.ops).slice(0,25);
+  const cold = filtered.filter(m => m.avg < 0.200 || m.ops < 0.500)
+                        .filter(m => !(m.avg >= 0.400 || m.ops >= 0.850 || m.hr >= 3)) // exclude hot
+                        .sort((a,b) => a.ops - b.ops).slice(0,25);
+  document.getElementById('hotMatchupsContainer').innerHTML  = hot.length  ? hot.map(m=>renderMatchupRow(m,'hot')).join('')  : '<div class="matchup-loading">No hot matchups found yet — check back once lineups are confirmed.</div>';
+  document.getElementById('coldMatchupsContainer').innerHTML = cold.length ? cold.map(m=>renderMatchupRow(m,'cold')).join('') : '<div class="matchup-loading">No cold matchups found yet.</div>';
 }
 
 function setMatchupMinAB(n, btn) {
