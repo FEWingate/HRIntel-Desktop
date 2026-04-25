@@ -1211,6 +1211,87 @@
   .tracker-daily-stat .hit-count { color:#4ade80; font-weight:700; }
   .tracker-daily-stat .miss-count { color:#e63946; font-weight:700; }
   .tracker-daily-stat .pending-count { color:var(--text-dim); }
+
+  /* ── MATCHUPS SECTION ── */
+  .matchups-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:900; align-items:center; justify-content:center; padding:20px; }
+  .matchups-modal-overlay.open { display:flex; }
+  .matchups-modal {
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    width:100%; max-width:1000px; max-height:90vh; overflow:hidden;
+    display:flex; flex-direction:column; box-shadow:0 24px 64px rgba(0,0,0,0.6);
+  }
+  .matchups-modal-header {
+    padding:16px 24px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    background:rgba(255,255,255,0.02); flex-shrink:0;
+  }
+  .matchups-modal-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; }
+  .matchups-modal-close { background:none; border:none; color:var(--text-dim); font-size:18px; cursor:pointer; }
+  .matchups-modal-close:hover { color:var(--text); }
+  .matchups-filter-bar {
+    padding:10px 24px; border-bottom:1px solid var(--border); flex-shrink:0;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    background:rgba(255,255,255,0.01);
+  }
+  .matchups-filter-label { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:1px; }
+  .matchups-ab-btn {
+    font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; letter-spacing:1px;
+    padding:4px 12px; border-radius:12px; border:1px solid var(--border2);
+    background:var(--surface2); color:var(--text-mid); cursor:pointer; transition:all 0.15s;
+  }
+  .matchups-ab-btn.active { border-color:var(--accent-blue); color:var(--accent-blue); background:rgba(76,201,240,0.08); }
+  .matchups-body { overflow-y:auto; flex:1; padding:0; }
+  .matchups-body::-webkit-scrollbar { width:3px; }
+  .matchups-body::-webkit-scrollbar-thumb { background:var(--border); }
+  .matchups-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+  @media (max-width:768px) { .matchups-grid { grid-template-columns:1fr; } }
+  .matchups-panel { padding:16px 20px; }
+  .matchups-panel:first-child { border-right:1px solid var(--border); }
+  .matchups-panel-title {
+    font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px;
+    margin-bottom:4px; display:flex; align-items:center; gap:8px;
+  }
+  .matchups-panel-sub { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-dim); letter-spacing:1px; margin-bottom:12px; }
+  .matchup-row {
+    display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
+    padding:8px 10px; border-radius:8px; margin-bottom:6px;
+    background:var(--surface2); border:1px solid var(--border);
+    transition:border-color 0.15s; cursor:pointer;
+  }
+  .matchup-row:hover { border-color:var(--border2); }
+  .matchup-row.hot  { border-left:3px solid #4ade80; }
+  .matchup-row.cold { border-left:3px solid #e63946; }
+  .matchup-names { display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap; }
+  .matchup-hitter { font-size:13px; font-weight:700; color:var(--text); }
+  .matchup-vs { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-dim); }
+  .matchup-pitcher { font-size:12px; color:var(--text-mid); }
+  .matchup-game { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-dim); margin-bottom:5px; }
+  .matchup-stats { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .matchup-stat { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-mid); }
+  .matchup-stat strong { color:var(--text); }
+  .matchup-stat strong.gold { color:var(--accent-gold); }
+  .matchup-stat strong.green { color:#4ade80; }
+  .matchup-stat strong.red { color:#e63946; }
+  .matchup-ops { font-family:'Bebas Neue',sans-serif; font-size:24px; line-height:1; min-width:52px; text-align:right; }
+  .matchup-ops.hot  { color:#4ade80; }
+  .matchup-ops.cold { color:#e63946; }
+  .matchup-ops.warm { color:var(--text-mid); }
+  .matchup-loading { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); text-align:center; padding:30px; }
+
+  /* H2H strip on threat cards */
+  .alert-h2h {
+    margin-top:8px; padding:7px 10px;
+    background:rgba(255,255,255,0.03); border:1px solid var(--border);
+    border-radius:6px; font-family:'IBM Plex Mono',monospace; font-size:10px;
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap; line-height:1.5;
+  }
+  .alert-h2h-label { font-weight:700; letter-spacing:1px; flex-shrink:0; }
+  .alert-h2h-label.gold  { color:var(--accent-gold); }
+  .alert-h2h-label.white { color:var(--text); }
+  .alert-h2h-label.red   { color:#e63946; }
+  .alert-h2h-stat { color:var(--text-mid); }
+  .alert-h2h-stat strong { color:var(--text); }
+
   #playerModal { transition: max-width 0.3s ease; max-width: 560px !important; }
   #playerModal.split-mode { max-width: 1100px !important; }
 
@@ -2264,6 +2345,15 @@
         </div>
       </div>
 
+      <!-- MATCHUPS -->
+      <div class="sidebar-section">
+        <div class="sidebar-mlb-btn" onclick="openMatchupsModal()" style="border-color:rgba(74,222,128,0.2);">
+          <span class="sidebar-mlb-icon">⚔️</span>
+          <span class="sidebar-mlb-label" style="color:#4ade80;">Matchups</span>
+          <span class="sidebar-mlb-arrow" style="color:#4ade80;">›</span>
+        </div>
+      </div>
+
     </aside>
 
     <!-- MAIN CONTENT -->
@@ -3069,14 +3159,14 @@ function renderNoHRAlerts(alerts) {
 }
 
 // ── RENDER ALERTS ────────────────────────────────────────────────────
-function renderAlerts(alerts) {
+function renderAlerts(alerts, skipEnrich=false) {
   const c = document.getElementById('alertsContainer');
   if (!alerts.length) {
     c.innerHTML = `<div class="no-alerts">✓ No threat matchups detected yet. Check back once lineups post (~3hrs before first pitch).</div>`;
     return;
   }
   // Capture today's threats for the tracker (once per day)
-  trackerCaptureToday(alerts);
+  if (!skipEnrich) trackerCaptureToday(alerts);
   c.innerHTML = alerts.map(a=>{
     const cls         = a.type==='triple' ? 'alert-triple' : 'alert-double';
     const pitcherHand = a.pitcher?.id ? handednessCache[a.pitcher.id] : null;
@@ -3116,11 +3206,13 @@ function renderAlerts(alerts) {
         ${hitterTag}${pitcherTag}${venueTag}${tripleTag}
         <span class="tag tag-time">${a.game.time}</span>
       </div>
+      ${a.h2h ? h2hStrip(a.h2h, a.pitcher?.name||'') : ''}
     </div>`;
   }).join('');
-}
 
-// ── TIED RANKING HELPER ──────────────────────────────────────────────
+  // Async H2H enrichment — fetch in background then re-render cleanly
+  if (!skipEnrich) enrichAlertsWithH2H(alerts);
+}
 function tiedRanks(list, valKey) {
   const ranks = [];
   let rank = 1;
@@ -5664,20 +5756,23 @@ async function trackerCheckResults(dateKey) {
   const day = data[dateKey];
   let changed = false;
 
-  // Only check games that are still pending
   const pendingThreats = day.threats.filter(t => t.result === 'pending' && t.gamePk);
   if (!pendingThreats.length) return;
 
-  // Get unique gamePks
   const gamePks = [...new Set(pendingThreats.map(t => t.gamePk))];
 
   for (const gamePk of gamePks) {
     try {
-      const box = await fetchJSON(`${BASE}/game/${gamePk}/boxscore`);
-      const status = box.gameData?.status?.abstractGameState || '';
-      if (status !== 'Final') continue; // only mark results for final games
+      // Use game feed to get both status and boxscore data
+      const feed = await fetchJSON(`${BASE}/game/${gamePk}/linescore`);
+      const schedData = await fetchJSON(`${BASE}/schedule?sportId=1&gamePk=${gamePk}`);
+      const gameStatus = schedData?.dates?.[0]?.games?.[0]?.status?.abstractGameState || '';
+      if (gameStatus !== 'Final') continue;
 
-      // Collect all HR hitters from this game
+      // Now get boxscore for HR data
+      const box = await fetchJSON(`${BASE}/game/${gamePk}/boxscore`);
+
+      // Collect all HR hitters
       const hrHitterIds = new Set();
       for (const side of ['away','home']) {
         const players = box.teams?.[side]?.players || {};
@@ -5688,11 +5783,10 @@ async function trackerCheckResults(dateKey) {
         }
       }
 
-      // Update results for threats in this game
+      // Update results
       for (const threat of day.threats) {
         if (threat.gamePk !== gamePk || threat.result !== 'pending') continue;
         if (threat.hitterId && hrHitterIds.has(threat.hitterId)) {
-          // Find their HR count
           for (const side of ['away','home']) {
             const players = box.teams?.[side]?.players || {};
             for (const [,pd] of Object.entries(players)) {
@@ -5707,7 +5801,7 @@ async function trackerCheckResults(dateKey) {
         }
         changed = true;
       }
-    } catch { /* skip failed fetches */ }
+    } catch(e) { console.warn('Tracker check failed for gamePk', gamePk, e); }
   }
 
   if (changed) trackerSave(data);
@@ -5861,14 +5955,23 @@ function trackerGoToday() {
 // ── Open / Close ──
 async function openTrackerModal() {
   document.getElementById('trackerModalOverlay').classList.add('open');
-  // Check results for today before rendering
-  const todayKey = trackerDateKey(new Date());
-  await trackerCheckResults(todayKey);
-  trackerUpdateSeasonSummary();
-  // Navigate to most recent date with data, defaulting to today
+
+  // Check results for ALL dates that have pending threats
   const data = trackerLoad();
-  const dates = Object.keys(data).sort();
-  trackerCurrentDate = dates.length ? dates[dates.length - 1] : todayKey;
+  const pendingDates = Object.keys(data).filter(dateKey => {
+    return data[dateKey]?.threats?.some(t => t.result === 'pending');
+  });
+
+  // Check each pending date (most recent first)
+  for (const dateKey of pendingDates.sort().reverse()) {
+    await trackerCheckResults(dateKey);
+  }
+
+  trackerUpdateSeasonSummary();
+
+  // Navigate to most recent date with data
+  const allDates = Object.keys(trackerLoad()).sort();
+  trackerCurrentDate = allDates.length ? allDates[allDates.length - 1] : trackerDateKey(new Date());
   trackerRenderDate(trackerCurrentDate);
 }
 
@@ -5877,9 +5980,212 @@ function closeTrackerModal(e) {
   document.getElementById('trackerModalOverlay').classList.remove('open');
 }
 
+// ── MATCHUPS & H2H ───────────────────────────────────────────────────────
+let _matchupsData   = []; // cached full matchup list
+let _matchupsMinAB  = 10;
+const H2H_CACHE_KEY = 'hrintel_h2h_cache_v1';
+let _h2hCache = (() => { try { return JSON.parse(localStorage.getItem(H2H_CACHE_KEY)||'{}'); } catch { return {}; } })();
+
+function h2hCacheSave() {
+  try { localStorage.setItem(H2H_CACHE_KEY, JSON.stringify(_h2hCache)); } catch(e) {}
+}
+
+// Fetch H2H stats for a single batter vs pitcher
+async function fetchH2H(batterId, pitcherId) {
+  const key = `${batterId}-${pitcherId}`;
+  if (_h2hCache[key] !== undefined) return _h2hCache[key];
+  try {
+    const url = `${BASE}/people/${batterId}/stats?stats=vsPlayer&group=hitting&opposingPlayerId=${pitcherId}&sportId=1`;
+    const d = await fetchJSON(url);
+    const splits = d?.stats?.[0]?.splits || [];
+    if (!splits.length) { _h2hCache[key] = null; return null; }
+    const s = splits[0].stat;
+    const result = {
+      ab:  s.atBats        ?? 0,
+      h:   s.hits          ?? 0,
+      hr:  s.homeRuns      ?? 0,
+      rbi: s.rbi           ?? 0,
+      bb:  s.baseOnBalls   ?? 0,
+      k:   s.strikeOuts    ?? 0,
+      avg: parseFloat(s.avg) || 0,
+      ops: parseFloat(s.ops) || 0,
+    };
+    _h2hCache[key] = result;
+    h2hCacheSave();
+    return result;
+  } catch { _h2hCache[key] = null; return null; }
+}
+
+// Build matchup list from today's games
+async function buildMatchupsList() {
+  const matchups = [];
+  const seen = new Set();
+
+  for (const game of todayGames) {
+    const awayLineup = game.away?.lineup || [];
+    const homeLineup = game.home?.lineup || [];
+    const awayPitcherId = game.away?.pitcherId;
+    const homePitcherId = game.home?.pitcherId;
+    const awayPitcherName = game.away?.pitcherName || 'TBD';
+    const homePitcherName = game.home?.pitcherName || 'TBD';
+
+    // Away batters vs home pitcher
+    if (homePitcherId) {
+      for (const batter of homeLineup.length ? homeLineup : []) {
+        const key = `${batter.id}-${homePitcherId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const h2h = await fetchH2H(batter.id, homePitcherId);
+        if (h2h && h2h.ab >= 5) {
+          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.home.team, pitcherId: homePitcherId, pitcherName: homePitcherName, pitcherTeam: game.away.team, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
+        }
+      }
+    }
+    // Home batters vs away pitcher
+    if (awayPitcherId) {
+      for (const batter of awayLineup.length ? awayLineup : []) {
+        const key = `${batter.id}-${awayPitcherId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const h2h = await fetchH2H(batter.id, awayPitcherId);
+        if (h2h && h2h.ab >= 5) {
+          matchups.push({ ...h2h, hitterId: batter.id, hitterName: batter.name, hitterTeam: game.away.team, pitcherId: awayPitcherId, pitcherName: awayPitcherName, pitcherTeam: game.home.team, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time });
+        }
+      }
+    }
+  }
+  return matchups;
+}
+
+// Also fetch H2H for threat alert hitters vs their pitchers
+async function enrichAlertsWithH2H(alerts) {
+  const toFetch = alerts.filter(a => a.hitter?.id && a.pitcher?.id && a.pitcher.name !== 'TBD');
+  // Fetch all in parallel
+  await Promise.all(toFetch.map(async a => {
+    const h2h = await fetchH2H(a.hitter.id, a.pitcher.id);
+    a.h2h = h2h;
+  }));
+  // Re-render alerts with H2H data if any was found
+  const hasH2H = alerts.some(a => a.h2h);
+  if (hasH2H) renderAlerts(alerts, true); // true = skip re-enrichment to avoid loop
+}
+
+// Format H2H strip for threat cards
+function h2hStrip(h2h, pitcherName) {
+  if (!h2h || h2h.ab < 10) return '';
+  const ops   = h2h.ops;
+  const avgVal = h2h.avg;
+  let cls = 'white';
+  if (avgVal >= 0.350 || h2h.hr >= 2) cls = 'gold';
+  else if (avgVal < 0.220) cls = 'red';
+  const avgStr = avgVal.toFixed(3).replace('0.','.');
+  const opsStr = ops.toFixed(3).replace('0.','.');
+  const label  = cls === 'gold' ? '🔥 H2H EDGE' : cls === 'red' ? '🧊 H2H COLD' : '⚔ H2H';
+  return `<div class="alert-h2h">
+    <span class="alert-h2h-label ${cls}">${label} vs ${pitcherName.split(' ').pop()}</span>
+    <span class="alert-h2h-stat"><strong>${h2h.ab} AB</strong></span>
+    <span class="alert-h2h-stat">· <strong>${h2h.h} H</strong></span>
+    <span class="alert-h2h-stat">· <strong>${h2h.hr} HR</strong></span>
+    <span class="alert-h2h-stat">· <strong>${h2h.rbi} RBI</strong></span>
+    <span class="alert-h2h-stat">· <strong>${h2h.bb} BB</strong></span>
+    <span class="alert-h2h-stat">· <strong>${h2h.k} K</strong></span>
+    <span class="alert-h2h-stat">· AVG <strong>${avgStr}</strong></span>
+    <span class="alert-h2h-stat">· OPS <strong>${opsStr}</strong></span>
+  </div>`;
+}
+
+// Render matchup rows
+function renderMatchupRow(m, type) {
+  const ops    = m.ops || 0;
+  const avgStr = (m.avg||0).toFixed(3).replace('0.','.');
+  const opsStr = ops.toFixed(3).replace('0.','.');
+  const opsCls = ops >= 0.800 ? 'hot' : ops <= 0.600 ? 'cold' : 'warm';
+  const avgCls = m.avg >= 0.350 ? 'gold' : m.avg < 0.220 ? 'red' : '';
+  return `<div class="matchup-row ${type}" onclick="openPlayerModal(${m.hitterId},'${(m.hitterName||'').replace(/'/g,"\\'")}','${m.hitterTeam}')">
+    <div>
+      <div class="matchup-game">${m.gameInfo} · ${m.gameTime}</div>
+      <div class="matchup-names">
+        <span class="matchup-hitter">${m.hitterName}</span>
+        <span class="matchup-vs">vs</span>
+        <span class="matchup-pitcher">${m.pitcherName}</span>
+      </div>
+      <div class="matchup-stats">
+        <span class="matchup-stat">${m.ab} AB</span>
+        <span class="matchup-stat">· <strong>${m.h} H</strong></span>
+        <span class="matchup-stat">· <strong class="${m.hr>=2?'gold':''}">${m.hr} HR</strong></span>
+        <span class="matchup-stat">· <strong>${m.rbi} RBI</strong></span>
+        <span class="matchup-stat">· <strong>${m.bb} BB</strong></span>
+        <span class="matchup-stat">· <strong>${m.k} K</strong></span>
+        <span class="matchup-stat">· AVG <strong class="${avgCls}">${avgStr}</strong></span>
+      </div>
+    </div>
+    <div class="matchup-ops ${opsCls}">${opsStr}</div>
+  </div>`;
+}
+
+function renderMatchupsUI() {
+  const filtered = _matchupsData.filter(m => m.ab >= _matchupsMinAB);
+  const hot  = [...filtered].sort((a,b) => b.ops - a.ops).slice(0,20);
+  const cold = [...filtered].sort((a,b) => a.ops - b.ops).slice(0,20);
+  document.getElementById('hotMatchupsContainer').innerHTML  = hot.length  ? hot.map(m=>renderMatchupRow(m,'hot')).join('')  : '<div class="matchup-loading">No matchups meet the minimum AB threshold.</div>';
+  document.getElementById('coldMatchupsContainer').innerHTML = cold.length ? cold.map(m=>renderMatchupRow(m,'cold')).join('') : '<div class="matchup-loading">No matchups meet the minimum AB threshold.</div>';
+}
+
+function setMatchupMinAB(n, btn) {
+  _matchupsMinAB = n;
+  document.querySelectorAll('.matchups-ab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMatchupsUI();
+}
+
+async function openMatchupsModal() {
+  document.getElementById('matchupsModalOverlay').classList.add('open');
+  if (_matchupsData.length) { renderMatchupsUI(); return; }
+  document.getElementById('hotMatchupsContainer').innerHTML  = '<div class="matchup-loading">Fetching H2H data from MLB Stats API...</div>';
+  document.getElementById('coldMatchupsContainer').innerHTML = '<div class="matchup-loading">This may take a moment...</div>';
+  _matchupsData = await buildMatchupsList();
+  renderMatchupsUI();
+}
+
+function closeMatchupsModal(e) {
+  if (e && e.target !== document.getElementById('matchupsModalOverlay')) return;
+  document.getElementById('matchupsModalOverlay').classList.remove('open');
+}
+
 if ('Notification' in window && Notification.permission==='default') Notification.requestPermission();
 initDashboard();
 </script>
+  <!-- MATCHUPS MODAL -->
+  <div class="matchups-modal-overlay" id="matchupsModalOverlay" onclick="closeMatchupsModal(event)">
+    <div class="matchups-modal">
+      <div class="matchups-modal-header">
+        <div class="matchups-modal-title">⚔️ Batter vs. Pitcher Matchups</div>
+        <button class="matchups-modal-close" onclick="closeMatchupsModal()">✕</button>
+      </div>
+      <div class="matchups-filter-bar">
+        <span class="matchups-filter-label">MIN AB:</span>
+        <button class="matchups-ab-btn active" onclick="setMatchupMinAB(10,this)">10+</button>
+        <button class="matchups-ab-btn" onclick="setMatchupMinAB(15,this)">15+</button>
+        <button class="matchups-ab-btn" onclick="setMatchupMinAB(20,this)">20+</button>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:auto;" id="matchupsUpdated">Today's confirmed starters only</span>
+      </div>
+      <div class="matchups-body">
+        <div class="matchups-grid">
+          <div class="matchups-panel">
+            <div class="matchups-panel-title" style="color:#4ade80;">🔥 Hot Matchups</div>
+            <div class="matchups-panel-sub">STRONG HISTORICAL PERFORMANCE VS TODAY'S STARTER</div>
+            <div id="hotMatchupsContainer"><div class="matchup-loading">Loading matchup data...</div></div>
+          </div>
+          <div class="matchups-panel">
+            <div class="matchups-panel-title" style="color:#e63946;">🧊 Cold Matchups</div>
+            <div class="matchups-panel-sub">STRUGGLES HISTORICALLY VS TODAY'S STARTER</div>
+            <div id="coldMatchupsContainer"><div class="matchup-loading">Loading matchup data...</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- THREAT TRACKER MODAL -->
   <div class="tracker-modal-overlay" id="trackerModalOverlay" onclick="closeTrackerModal(event)">
     <div class="tracker-modal">
