@@ -6280,7 +6280,9 @@ function closeMatchupsModal(e) {
 let _pitcherMatchupsData = [];
 let _pitcherMinGS = 0;
 const PITCHER_H2H_KEY = 'hrintel_pitcher_h2h_v1';
-let _pitcherH2HCache = (() => { try { return JSON.parse(localStorage.getItem(PITCHER_H2H_KEY)||'{}'); } catch { return {}; } })();
+// Always start fresh — clear stale pitcher cache on load
+try { localStorage.removeItem(PITCHER_H2H_KEY); } catch {}
+let _pitcherH2HCache = {};
 
 function pitcherH2HCacheSave() {
   try { localStorage.setItem(PITCHER_H2H_KEY, JSON.stringify(_pitcherH2HCache)); } catch {}
