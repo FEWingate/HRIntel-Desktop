@@ -6293,17 +6293,36 @@ async function fetchPitcherVsTeam(pitcherId, teamId) {
     const splits = d?.stats?.[0]?.splits || [];
     if (!splits.length) return null;
     const s = splits[0].stat;
+
+    // Helper to safely parse stat values — handles "-.--", null, undefined
+    const safeFloat = (...vals) => {
+      for (const v of vals) {
+        if (v === null || v === undefined) continue;
+        const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+        if (!isNaN(n)) return n;
+      }
+      return 0;
+    };
+    const safeInt = (...vals) => {
+      for (const v of vals) {
+        if (v === null || v === undefined) continue;
+        const n = parseInt(v);
+        if (!isNaN(n)) return n;
+      }
+      return 0;
+    };
+
     const result = {
-      gs:   s.gamesStarted                    ?? s.gamesPlayed ?? 0,
-      ip:   parseFloat(s.inningsPitched)       || 0,
-      era:  parseFloat(s.era)                  || parseFloat(s.earnedRunAverage) || 0,
-      whip: parseFloat(s.whip)                 || parseFloat(s.walksPlusHitsPerInningPitched) || 0,
-      k:    s.strikeOuts                       ?? 0,
-      bb:   s.baseOnBalls                      ?? s.walks ?? 0,
-      hr:   s.homeRuns                         ?? s.homeRunsAllowed ?? 0,
-      h:    s.hits                             ?? s.hitsAllowed ?? 0,
-      avg:  parseFloat(s.avg)                  || parseFloat(s.battingAvgAgainst) || 0,
-      ops:  parseFloat(s.ops)                  || parseFloat(s.opsAgainst) || 0,
+      gs:   safeInt(s.gamesStarted, s.gamesPlayed),
+      ip:   safeFloat(s.inningsPitched),
+      era:  safeFloat(s.era),
+      whip: safeFloat(s.whip),
+      k:    safeInt(s.strikeOuts),
+      bb:   safeInt(s.baseOnBalls, s.walks),
+      hr:   safeInt(s.homeRuns),
+      h:    safeInt(s.hits),
+      avg:  safeFloat(s.avg, s.battingAverage),
+      ops:  safeFloat(s.ops),
     };
     _pitcherH2HCache[key] = result;
     pitcherH2HCacheSave();
