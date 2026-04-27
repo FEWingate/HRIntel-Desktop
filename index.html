@@ -1240,6 +1240,12 @@
     background:var(--surface2); color:var(--text-mid); cursor:pointer; transition:all 0.15s;
   }
   .matchups-ab-btn.active { border-color:var(--accent-blue); color:var(--accent-blue); background:rgba(76,201,240,0.08); }
+  .matchups-gs-btn {
+    font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; letter-spacing:1px;
+    padding:4px 12px; border-radius:12px; border:1px solid var(--border2);
+    background:var(--surface2); color:var(--text-mid); cursor:pointer; transition:all 0.15s;
+  }
+  .matchups-gs-btn.active { border-color:#e63946; color:#e63946; background:rgba(230,57,70,0.08); }
   .matchups-body { overflow-y:auto; flex:1; padding:0; }
   .matchups-body::-webkit-scrollbar { width:3px; }
   .matchups-body::-webkit-scrollbar-thumb { background:var(--border); }
@@ -1278,7 +1284,45 @@
   .matchup-ops.warm { color:var(--text-mid); }
   .matchup-loading { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); text-align:center; padding:30px; }
 
-  /* H2H strip on threat cards */
+  /* Matchups tabs */
+  .matchups-tab-bar {
+    display:flex; background:var(--surface2); border:1px solid var(--border);
+    border-radius:25px; padding:3px; gap:3px; margin:0 24px 0;
+  }
+  .matchups-tab-btn {
+    flex:1; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700;
+    letter-spacing:1px; text-transform:uppercase; padding:7px 16px; border-radius:22px;
+    border:1px solid transparent; background:transparent; color:var(--text-dim);
+    cursor:pointer; transition:all 0.2s; text-align:center; white-space:nowrap;
+  }
+  .matchups-tab-btn.active-batters { background:var(--accent-blue); color:#000; }
+  .matchups-tab-btn.active-pitchers { background:#e63946; color:#fff; }
+
+  /* Pitcher matchup row */
+  .pitcher-matchup-row {
+    display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
+    padding:8px 10px; border-radius:8px; margin-bottom:6px;
+    background:var(--surface2); border:1px solid var(--border);
+    transition:border-color 0.15s; cursor:pointer;
+  }
+  .pitcher-matchup-row:hover { border-color:var(--border2); }
+  .pitcher-matchup-row.hot  { border-left:3px solid #4ade80; }
+  .pitcher-matchup-row.cold { border-left:3px solid #e63946; }
+  .pitcher-matchup-names { display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap; }
+  .pitcher-matchup-name { font-size:13px; font-weight:700; color:var(--text); }
+  .pitcher-matchup-vs { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-dim); }
+  .pitcher-matchup-team { font-size:12px; color:var(--text-mid); }
+  .pitcher-matchup-game { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-dim); margin-bottom:5px; }
+  .pitcher-matchup-stats { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .pitcher-matchup-stat { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-mid); }
+  .pitcher-matchup-stat strong { color:var(--text); }
+  .pitcher-matchup-stat strong.gold { color:var(--accent-gold); }
+  .pitcher-matchup-stat strong.green { color:#4ade80; }
+  .pitcher-matchup-stat strong.red { color:#e63946; }
+  .pitcher-matchup-era { font-family:'Bebas Neue',sans-serif; font-size:24px; line-height:1; min-width:52px; text-align:right; }
+  .pitcher-matchup-era.hot  { color:#4ade80; }
+  .pitcher-matchup-era.cold { color:#e63946; }
+  .pitcher-matchup-era.warm { color:var(--text-mid); }
   .alert-h2h {
     margin-top:8px; padding:7px 10px;
     background:rgba(255,255,255,0.03); border:1px solid var(--border);
@@ -6210,9 +6254,15 @@ function setMatchupMinAB(n, btn) {
 
 async function openMatchupsModal() {
   document.getElementById('matchupsModalOverlay').classList.add('open');
-  // Always rebuild — pitchers/lineups may have updated
+  // Always reset to batters tab
+  switchMatchupsTab('batters', document.getElementById('matchupsBatterTab'));
+  // Always rebuild batter data fresh
   _matchupsData = [];
-  document.getElementById('hotMatchupsContainer').innerHTML  = '<div class="matchup-loading">Fetching H2H data — using top hitters vs today\'s confirmed starters...</div>';
+  _pitcherMatchupsData = [];
+  // Clear pitcher cache to re-fetch with corrected field names
+  try { localStorage.removeItem(PITCHER_H2H_KEY); } catch {}
+  _pitcherH2HCache = {};
+  document.getElementById('hotMatchupsContainer').innerHTML  = '<div class="matchup-loading">Fetching H2H data — using full rosters vs today\'s confirmed starters...</div>';
   document.getElementById('coldMatchupsContainer').innerHTML = '<div class="matchup-loading">This may take 15-30 seconds...</div>';
   _matchupsData = await buildMatchupsList();
   renderMatchupsUI();
@@ -6223,17 +6273,177 @@ function closeMatchupsModal(e) {
   document.getElementById('matchupsModalOverlay').classList.remove('open');
 }
 
-if ('Notification' in window && Notification.permission==='default') Notification.requestPermission();
+// ── PITCHER VS TEAM MATCHUPS ─────────────────────────────────────────
+let _pitcherMatchupsData = [];
+let _pitcherMinGS = 0;
+const PITCHER_H2H_KEY = 'hrintel_pitcher_h2h_v1';
+let _pitcherH2HCache = (() => { try { return JSON.parse(localStorage.getItem(PITCHER_H2H_KEY)||'{}'); } catch { return {}; } })();
+
+function pitcherH2HCacheSave() {
+  try { localStorage.setItem(PITCHER_H2H_KEY, JSON.stringify(_pitcherH2HCache)); } catch {}
+}
+
+// Fetch pitcher career stats vs a specific team
+async function fetchPitcherVsTeam(pitcherId, teamId) {
+  const key = `${pitcherId}-${teamId}`;
+  if (_pitcherH2HCache[key] !== undefined && _pitcherH2HCache[key] !== null) return _pitcherH2HCache[key];
+  try {
+    const url = `${BASE}/people/${pitcherId}/stats?stats=vsTeam&group=pitching&opposingTeamId=${teamId}&sportId=1`;
+    const d = await fetchJSON(url);
+    const splits = d?.stats?.[0]?.splits || [];
+    if (!splits.length) return null;
+    const s = splits[0].stat;
+    const result = {
+      gs:   s.gamesStarted                    ?? s.gamesPlayed ?? 0,
+      ip:   parseFloat(s.inningsPitched)       || 0,
+      era:  parseFloat(s.era)                  || parseFloat(s.earnedRunAverage) || 0,
+      whip: parseFloat(s.whip)                 || parseFloat(s.walksPlusHitsPerInningPitched) || 0,
+      k:    s.strikeOuts                       ?? 0,
+      bb:   s.baseOnBalls                      ?? s.walks ?? 0,
+      hr:   s.homeRuns                         ?? s.homeRunsAllowed ?? 0,
+      h:    s.hits                             ?? s.hitsAllowed ?? 0,
+      avg:  parseFloat(s.avg)                  || parseFloat(s.battingAvgAgainst) || 0,
+      ops:  parseFloat(s.ops)                  || parseFloat(s.opsAgainst) || 0,
+    };
+    _pitcherH2HCache[key] = result;
+    pitcherH2HCacheSave();
+    return result;
+  } catch { return null; }
+}
+
+// Build pitcher vs team list for today
+async function buildPitcherMatchupsList() {
+  const matchups = [];
+  const seen = new Set();
+
+  for (const game of todayGames) {
+    // Each pitcher faces the opposing team
+    const pitchers = [
+      { id: game.home?.pitcherId, name: game.home?.pitcherName, pitcherTeam: game.home?.team, opposingTeam: game.away?.team, opposingTeamId: game.away?.id, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time },
+      { id: game.away?.pitcherId, name: game.away?.pitcherName, pitcherTeam: game.away?.team, opposingTeam: game.home?.team, opposingTeamId: game.home?.id, gameInfo: `${game.away.team} @ ${game.home.team}`, gameTime: game.time },
+    ];
+
+    for (const p of pitchers) {
+      if (!p.id || !p.opposingTeamId || p.name === 'TBD' || !p.name) continue;
+      const key = `${p.id}-${p.opposingTeamId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const stats = await fetchPitcherVsTeam(p.id, p.opposingTeamId);
+      if (stats && stats.gs >= 1) {
+        matchups.push({
+          ...stats,
+          pitcherId:    p.id,
+          pitcherName:  p.name,
+          pitcherTeam:  p.pitcherTeam,
+          opposingTeam: p.opposingTeam,
+          gameInfo:     p.gameInfo,
+          gameTime:     p.gameTime,
+        });
+      }
+    }
+  }
+  return matchups;
+}
+
+function renderPitcherMatchupRow(m, type) {
+  const era     = m.era || 0;
+  const eraStr  = era.toFixed(2);
+  const eraCls  = era <= 3.00 ? 'hot' : era >= 5.00 ? 'cold' : 'warm';
+  const whipStr = (m.whip||0).toFixed(2);
+  const avgStr  = (m.avg||0).toFixed(3).replace('0.','.');
+  const opsStr  = (m.ops||0).toFixed(3).replace('0.','.');
+  const eraBold = era <= 3.00 ? 'green' : era >= 5.00 ? 'red' : '';
+
+  return `<div class="pitcher-matchup-row ${type}" onclick="openPlayerModal(${m.pitcherId},'${(m.pitcherName||'').replace(/'/g,"\\'")}','${m.pitcherTeam}')">
+    <div>
+      <div class="pitcher-matchup-game">${m.gameInfo} · ${m.gameTime}</div>
+      <div class="pitcher-matchup-names">
+        <span class="pitcher-matchup-name">${m.pitcherName}</span>
+        <span class="pitcher-matchup-vs">vs</span>
+        <span class="pitcher-matchup-team">${m.opposingTeam}</span>
+      </div>
+      <div class="pitcher-matchup-stats">
+        <span class="pitcher-matchup-stat">${m.gs} GS</span>
+        <span class="pitcher-matchup-stat">· <strong class="${eraBold}">${eraStr} ERA</strong></span>
+        <span class="pitcher-matchup-stat">· <strong>${whipStr} WHIP</strong></span>
+        <span class="pitcher-matchup-stat">· <strong>${m.k} K</strong></span>
+        <span class="pitcher-matchup-stat">· <strong>${m.bb} BB</strong></span>
+        <span class="pitcher-matchup-stat">· <strong class="${m.hr>=3?'red':''}">${m.hr} HR</strong></span>
+        <span class="pitcher-matchup-stat">· AVG <strong class="${m.avg>=0.300?'red':m.avg<0.220?'green':''}">${avgStr}</strong></span>
+        <span class="pitcher-matchup-stat">· OPS <strong>${opsStr}</strong></span>
+      </div>
+    </div>
+    <div class="pitcher-matchup-era ${eraCls}">${eraStr}</div>
+  </div>`;
+}
+
+function renderPitcherMatchupsUI() {
+  const filtered = _pitcherMatchupsData.filter(m => m.gs >= _pitcherMinGS);
+  // Hot: ERA ≤ 3.00 OR OPS against ≤ .600
+  // Cold: ERA ≥ 5.00 OR OPS against ≥ .850
+  const hot  = filtered.filter(m => m.era <= 3.00 || m.ops <= 0.600)
+                        .filter(m => !(m.era >= 5.00 || m.ops >= 0.850))
+                        .sort((a,b) => a.era - b.era).slice(0,20);
+  const cold = filtered.filter(m => m.era >= 5.00 || m.ops >= 0.850)
+                        .sort((a,b) => b.era - a.era).slice(0,20);
+  document.getElementById('hotPitcherContainer').innerHTML  = hot.length  ? hot.map(m=>renderPitcherMatchupRow(m,'hot')).join('')  : '<div class="matchup-loading">No dominant pitcher matchups found.</div>';
+  document.getElementById('coldPitcherContainer').innerHTML = cold.length ? cold.map(m=>renderPitcherMatchupRow(m,'cold')).join('') : '<div class="matchup-loading">No struggling pitcher matchups found.</div>';
+}
+
+function setPitcherMinGS(n, btn) {
+  _pitcherMinGS = n;
+  document.querySelectorAll('.matchups-gs-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPitcherMatchupsUI();
+}
+
+function switchMatchupsTab(tab, btn) {
+  // Update tab buttons
+  document.getElementById('matchupsBatterTab').classList.remove('active-batters','active-pitchers');
+  document.getElementById('matchupsPitcherTab').classList.remove('active-batters','active-pitchers');
+  if (tab === 'batters') {
+    btn.classList.add('active-batters');
+    document.getElementById('batterMatchupsBody').style.display = '';
+    document.getElementById('pitcherMatchupsBody').style.display = 'none';
+    document.getElementById('batterFilterBar').style.display = '';
+    document.getElementById('pitcherFilterBar').style.display = 'none';
+  } else {
+    btn.classList.add('active-pitchers');
+    document.getElementById('batterMatchupsBody').style.display = 'none';
+    document.getElementById('pitcherMatchupsBody').style.display = '';
+    document.getElementById('batterFilterBar').style.display = 'none';
+    document.getElementById('pitcherFilterBar').style.display = '';
+    // Load pitcher data if not loaded yet
+    if (!_pitcherMatchupsData.length) {
+      document.getElementById('hotPitcherContainer').innerHTML  = '<div class="matchup-loading">Fetching pitcher vs team career data...</div>';
+      document.getElementById('coldPitcherContainer').innerHTML = '<div class="matchup-loading">This may take a moment...</div>';
+      buildPitcherMatchupsList().then(data => {
+        _pitcherMatchupsData = data;
+        renderPitcherMatchupsUI();
+      });
+    } else {
+      renderPitcherMatchupsUI();
+    }
+  }
+}
 initDashboard();
 </script>
   <!-- MATCHUPS MODAL -->
   <div class="matchups-modal-overlay" id="matchupsModalOverlay" onclick="closeMatchupsModal(event)">
     <div class="matchups-modal">
       <div class="matchups-modal-header">
-        <div class="matchups-modal-title">⚔️ Batter vs. Pitcher Matchups</div>
+        <div class="matchups-modal-title">⚔️ Matchups</div>
         <button class="matchups-modal-close" onclick="closeMatchupsModal()">✕</button>
       </div>
-      <div class="matchups-filter-bar">
+      <!-- Tab bar -->
+      <div style="padding:10px 24px 0;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div class="matchups-tab-bar" style="margin:0 0 10px 0;">
+          <button class="matchups-tab-btn active-batters" id="matchupsBatterTab" onclick="switchMatchupsTab('batters',this)">⚾ Batter vs. Pitcher</button>
+          <button class="matchups-tab-btn" id="matchupsPitcherTab" onclick="switchMatchupsTab('pitchers',this)">🔥 Pitcher vs. Team</button>
+        </div>
+      </div>
+      <!-- Batter filter bar -->
+      <div class="matchups-filter-bar" id="batterFilterBar">
         <span class="matchups-filter-label">MIN AB:</span>
         <button class="matchups-ab-btn active" onclick="setMatchupMinAB(5,this)">5+</button>
         <button class="matchups-ab-btn" onclick="setMatchupMinAB(10,this)">10+</button>
@@ -6241,7 +6451,17 @@ initDashboard();
         <button class="matchups-ab-btn" onclick="setMatchupMinAB(20,this)">20+</button>
         <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:auto;" id="matchupsUpdated">Today's confirmed starters only</span>
       </div>
-      <div class="matchups-body">
+      <!-- Pitcher filter bar -->
+      <div class="matchups-filter-bar" id="pitcherFilterBar" style="display:none;">
+        <span class="matchups-filter-label">MIN GS:</span>
+        <button class="matchups-gs-btn active" onclick="setPitcherMinGS(0,this)">Career</button>
+        <button class="matchups-gs-btn" onclick="setPitcherMinGS(5,this)">5+</button>
+        <button class="matchups-gs-btn" onclick="setPitcherMinGS(10,this)">10+</button>
+        <button class="matchups-gs-btn" onclick="setPitcherMinGS(20,this)">20+</button>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:auto;">Career stats vs today's opposing team</span>
+      </div>
+      <!-- Batter body -->
+      <div class="matchups-body" id="batterMatchupsBody">
         <div class="matchups-grid">
           <div class="matchups-panel">
             <div class="matchups-panel-title" style="color:#4ade80;">🔥 Hot Matchups</div>
@@ -6252,6 +6472,21 @@ initDashboard();
             <div class="matchups-panel-title" style="color:#e63946;">🧊 Cold Matchups</div>
             <div class="matchups-panel-sub">STRUGGLES HISTORICALLY VS TODAY'S STARTER</div>
             <div id="coldMatchupsContainer"><div class="matchup-loading">Loading matchup data...</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- Pitcher body -->
+      <div class="matchups-body" id="pitcherMatchupsBody" style="display:none;">
+        <div class="matchups-grid">
+          <div class="matchups-panel">
+            <div class="matchups-panel-title" style="color:#4ade80;">🔥 Dominant vs Team</div>
+            <div class="matchups-panel-sub">HISTORICALLY DOMINATES TODAY'S OPPOSING TEAM</div>
+            <div id="hotPitcherContainer"><div class="matchup-loading">Loading pitcher data...</div></div>
+          </div>
+          <div class="matchups-panel">
+            <div class="matchups-panel-title" style="color:#e63946;">🧊 Struggles vs Team</div>
+            <div class="matchups-panel-sub">HISTORICALLY STRUGGLES AGAINST TODAY'S OPPOSING TEAM</div>
+            <div id="coldPitcherContainer"><div class="matchup-loading">Loading pitcher data...</div></div>
           </div>
         </div>
       </div>
