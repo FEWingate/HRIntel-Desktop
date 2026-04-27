@@ -6278,7 +6278,7 @@ function closeMatchupsModal(e) {
 
 // ── PITCHER VS TEAM MATCHUPS ─────────────────────────────────────────
 let _pitcherMatchupsData = [];
-let _pitcherMinGS = 0;
+let _pitcherMinGS = 5;
 const PITCHER_H2H_KEY = 'hrintel_pitcher_h2h_v1';
 // Always start fresh — clear stale pitcher cache on load
 try { localStorage.removeItem(PITCHER_H2H_KEY); } catch {}
@@ -6298,13 +6298,13 @@ async function fetchPitcherVsTeam(pitcherId, teamId) {
     const splits = d?.stats?.[0]?.splits || [];
     if (!splits.length) return null;
     const s = splits[0].stat;
-    console.log('PITCHER_VS_TEAM_RAW:', JSON.stringify(s)); // DEBUG
 
     const safeFloat = (...vals) => {
       for (const v of vals) {
         if (v === null || v === undefined) continue;
-        const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
-        if (!isNaN(n) && n > 0) return n;
+        const str = String(v).replace(/[^0-9.]/g, '');
+        const n = parseFloat(str);
+        if (!isNaN(n)) return n;
       }
       return 0;
     };
@@ -6317,24 +6317,22 @@ async function fetchPitcherVsTeam(pitcherId, teamId) {
       return 0;
     };
 
-    const ip   = safeFloat(s.inningsPitched);
-    const er   = safeInt(s.earnedRuns, s.earnedRuns);
-    const h    = safeInt(s.hits);
-    const bb   = safeInt(s.baseOnBalls, s.walks);
-    const k    = safeInt(s.strikeOuts);
-    const hr   = safeInt(s.homeRuns);
-    const gs   = safeInt(s.gamesStarted, s.gamesPlayed);
+    // API returns opponent batting stats vs this pitcher
+    const gs  = safeInt(s.gamesStarted, s.gamesPlayed);
+    const h   = safeInt(s.hits);
+    const hr  = safeInt(s.homeRuns);
+    const k   = safeInt(s.strikeOuts);
+    const bb  = safeInt(s.baseOnBalls, s.intentionalWalks);
+    const ab  = safeInt(s.atBats);
+    const rbi = safeInt(s.rbi);
+    const avg = safeFloat(s.avg);
+    const obp = safeFloat(s.obp);
+    const slg = safeFloat(s.slg);
+    const ops = safeFloat(s.ops);
 
-    // Calculate ERA and WHIP from raw numbers if API doesn't return them
-    const eraRaw  = safeFloat(s.era);
-    const whipRaw = safeFloat(s.whip);
-    const era  = eraRaw  > 0 ? eraRaw  : (ip > 0 ? parseFloat(((er * 9) / ip).toFixed(2)) : 0);
-    const whip = whipRaw > 0 ? whipRaw : (ip > 0 ? parseFloat(((h + bb) / ip).toFixed(2))  : 0);
-
-    const result = {
-      gs, ip, era, whip, k, bb, hr, h,
-      avg: safeFloat(s.avg, s.battingAverage),
-      ops: safeFloat(s.ops),
+    const result = { gs, h, hr, k, bb, ab, rbi, avg, obp, slg, ops,
+      // ERA/WHIP not available from vsTeam endpoint — use ops as proxy
+      era: 0, whip: 0,
     };
     _pitcherH2HCache[key] = result;
     pitcherH2HCacheSave();
@@ -6377,13 +6375,11 @@ async function buildPitcherMatchupsList() {
 }
 
 function renderPitcherMatchupRow(m, type) {
-  const era     = m.era || 0;
-  const eraStr  = era.toFixed(2);
-  const eraCls  = era <= 3.00 ? 'hot' : era >= 5.00 ? 'cold' : 'warm';
-  const whipStr = (m.whip||0).toFixed(2);
-  const avgStr  = (m.avg||0).toFixed(3).replace('0.','.');
-  const opsStr  = (m.ops||0).toFixed(3).replace('0.','.');
-  const eraBold = era <= 3.00 ? 'green' : era >= 5.00 ? 'red' : '';
+  const ops    = m.ops || 0;
+  const opsStr = ops.toFixed(3).replace('0.','.');
+  const avgStr = (m.avg||0).toFixed(3).replace('0.','.');
+  const opsCls = ops <= 0.600 ? 'hot' : ops >= 0.850 ? 'cold' : 'warm';
+  const avgCls = m.avg <= 0.220 ? 'green' : m.avg >= 0.300 ? 'red' : '';
 
   return `<div class="pitcher-matchup-row ${type}" onclick="openPlayerModal(${m.pitcherId},'${(m.pitcherName||'').replace(/'/g,"\\'")}','${m.pitcherTeam}')">
     <div>
@@ -6395,28 +6391,30 @@ function renderPitcherMatchupRow(m, type) {
       </div>
       <div class="pitcher-matchup-stats">
         <span class="pitcher-matchup-stat">${m.gs} GS</span>
-        <span class="pitcher-matchup-stat">· <strong class="${eraBold}">${eraStr} ERA</strong></span>
-        <span class="pitcher-matchup-stat">· <strong>${whipStr} WHIP</strong></span>
+        <span class="pitcher-matchup-stat">· <strong>${m.ab} AB</strong></span>
+        <span class="pitcher-matchup-stat">· <strong>${m.h} H</strong></span>
+        <span class="pitcher-matchup-stat">· <strong class="${m.hr>=3?'red':''}">${m.hr} HR</strong></span>
         <span class="pitcher-matchup-stat">· <strong>${m.k} K</strong></span>
         <span class="pitcher-matchup-stat">· <strong>${m.bb} BB</strong></span>
-        <span class="pitcher-matchup-stat">· <strong class="${m.hr>=3?'red':''}">${m.hr} HR</strong></span>
-        <span class="pitcher-matchup-stat">· AVG <strong class="${m.avg>=0.300?'red':m.avg<0.220?'green':''}">${avgStr}</strong></span>
-        <span class="pitcher-matchup-stat">· OPS <strong>${opsStr}</strong></span>
+        <span class="pitcher-matchup-stat">· AVG <strong class="${avgCls}">${avgStr}</strong></span>
+        <span class="pitcher-matchup-stat">· OBP <strong>${(m.obp||0).toFixed(3).replace('0.','.')}</strong></span>
+        <span class="pitcher-matchup-stat">· SLG <strong>${(m.slg||0).toFixed(3).replace('0.','.')}</strong></span>
       </div>
     </div>
-    <div class="pitcher-matchup-era ${eraCls}">${eraStr}</div>
+    <div class="pitcher-matchup-era ${opsCls}">${opsStr}</div>
   </div>`;
 }
 
 function renderPitcherMatchupsUI() {
   const filtered = _pitcherMatchupsData.filter(m => m.gs >= _pitcherMinGS);
-  // Hot: ERA ≤ 3.00 OR OPS against ≤ .600
-  // Cold: ERA ≥ 5.00 OR OPS against ≥ .850
-  const hot  = filtered.filter(m => m.era <= 3.00 || m.ops <= 0.600)
-                        .filter(m => !(m.era >= 5.00 || m.ops >= 0.850))
-                        .sort((a,b) => a.era - b.era).slice(0,20);
-  const cold = filtered.filter(m => m.era >= 5.00 || m.ops >= 0.850)
-                        .sort((a,b) => b.era - a.era).slice(0,20);
+  // Hot pitcher = low OPS against (dominant), Cold = high OPS against (struggles)
+  // Dominant: OPS against ≤ .650 OR AVG against ≤ .220
+  // Struggles: OPS against ≥ .850 OR AVG against ≥ .300
+  const hot  = filtered.filter(m => m.ops <= 0.650 || m.avg <= 0.220)
+                        .filter(m => !(m.ops >= 0.850 || m.avg >= 0.300))
+                        .sort((a,b) => a.ops - b.ops).slice(0,20);
+  const cold = filtered.filter(m => m.ops >= 0.850 || m.avg >= 0.300)
+                        .sort((a,b) => b.ops - a.ops).slice(0,20);
   document.getElementById('hotPitcherContainer').innerHTML  = hot.length  ? hot.map(m=>renderPitcherMatchupRow(m,'hot')).join('')  : '<div class="matchup-loading">No dominant pitcher matchups found.</div>';
   document.getElementById('coldPitcherContainer').innerHTML = cold.length ? cold.map(m=>renderPitcherMatchupRow(m,'cold')).join('') : '<div class="matchup-loading">No struggling pitcher matchups found.</div>';
 }
@@ -6485,10 +6483,10 @@ initDashboard();
       <!-- Pitcher filter bar -->
       <div class="matchups-filter-bar" id="pitcherFilterBar" style="display:none;">
         <span class="matchups-filter-label">MIN GS:</span>
-        <button class="matchups-gs-btn active" onclick="setPitcherMinGS(0,this)">Career</button>
-        <button class="matchups-gs-btn" onclick="setPitcherMinGS(5,this)">5+</button>
+        <button class="matchups-gs-btn active" onclick="setPitcherMinGS(5,this)">5+</button>
         <button class="matchups-gs-btn" onclick="setPitcherMinGS(10,this)">10+</button>
         <button class="matchups-gs-btn" onclick="setPitcherMinGS(20,this)">20+</button>
+        <button class="matchups-gs-btn" onclick="setPitcherMinGS(0,this)">Career</button>
         <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:auto;">Career stats vs today's opposing team</span>
       </div>
       <!-- Batter body -->
@@ -6511,12 +6509,12 @@ initDashboard();
         <div class="matchups-grid">
           <div class="matchups-panel">
             <div class="matchups-panel-title" style="color:#4ade80;">🔥 Dominant vs Team</div>
-            <div class="matchups-panel-sub">HISTORICALLY DOMINATES TODAY'S OPPOSING TEAM</div>
+            <div class="matchups-panel-sub">LOW OPS AGAINST — HISTORICALLY DOMINATES THIS TEAM</div>
             <div id="hotPitcherContainer"><div class="matchup-loading">Loading pitcher data...</div></div>
           </div>
           <div class="matchups-panel">
             <div class="matchups-panel-title" style="color:#e63946;">🧊 Struggles vs Team</div>
-            <div class="matchups-panel-sub">HISTORICALLY STRUGGLES AGAINST TODAY'S OPPOSING TEAM</div>
+            <div class="matchups-panel-sub">HIGH OPS AGAINST — HISTORICALLY STRUGGLES VS THIS TEAM</div>
             <div id="coldPitcherContainer"><div class="matchup-loading">Loading pitcher data...</div></div>
           </div>
         </div>
