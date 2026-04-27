@@ -6278,7 +6278,7 @@ function closeMatchupsModal(e) {
 
 // ── PITCHER VS TEAM MATCHUPS ─────────────────────────────────────────
 let _pitcherMatchupsData = [];
-let _pitcherMinGS = 5;
+let _pitcherMinGS = 60;
 const PITCHER_H2H_KEY = 'hrintel_pitcher_h2h_v1';
 // Always start fresh — clear stale pitcher cache on load
 try { localStorage.removeItem(PITCHER_H2H_KEY); } catch {}
@@ -6406,7 +6406,7 @@ function renderPitcherMatchupRow(m, type) {
 }
 
 function renderPitcherMatchupsUI() {
-  const filtered = _pitcherMatchupsData.filter(m => m.gs >= _pitcherMinGS);
+  const filtered = _pitcherMatchupsData.filter(m => m.ab >= _pitcherMinGS);
   // Hot pitcher = low OPS against (dominant), Cold = high OPS against (struggles)
   // Dominant: OPS against ≤ .650 OR AVG against ≤ .220
   // Struggles: OPS against ≥ .850 OR AVG against ≥ .300
@@ -6482,12 +6482,12 @@ initDashboard();
       </div>
       <!-- Pitcher filter bar -->
       <div class="matchups-filter-bar" id="pitcherFilterBar" style="display:none;">
-        <span class="matchups-filter-label">MIN GS:</span>
-        <button class="matchups-gs-btn active" onclick="setPitcherMinGS(5,this)">5+</button>
-        <button class="matchups-gs-btn" onclick="setPitcherMinGS(10,this)">10+</button>
-        <button class="matchups-gs-btn" onclick="setPitcherMinGS(20,this)">20+</button>
+        <span class="matchups-filter-label">MIN AB:</span>
+        <button class="matchups-gs-btn active" onclick="setPitcherMinGS(60,this)">60+</button>
+        <button class="matchups-gs-btn" onclick="setPitcherMinGS(80,this)">80+</button>
+        <button class="matchups-gs-btn" onclick="setPitcherMinGS(100,this)">100+</button>
         <button class="matchups-gs-btn" onclick="setPitcherMinGS(0,this)">Career</button>
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:auto;">Career stats vs today's opposing team</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:auto;">Career AB against today's opposing team</span>
       </div>
       <!-- Batter body -->
       <div class="matchups-body" id="batterMatchupsBody">
