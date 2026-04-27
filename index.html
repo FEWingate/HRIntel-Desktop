@@ -6259,9 +6259,12 @@ async function openMatchupsModal() {
   // Always rebuild batter data fresh
   _matchupsData = [];
   _pitcherMatchupsData = [];
-  // Clear pitcher cache to re-fetch with corrected field names
+  // Always clear pitcher cache to force fresh fetch
   try { localStorage.removeItem(PITCHER_H2H_KEY); } catch {}
   _pitcherH2HCache = {};
+  // Also clear old batter cache to force fresh fetch
+  try { localStorage.removeItem(H2H_CACHE_KEY); } catch {}
+  _h2hCache = {};
   document.getElementById('hotMatchupsContainer').innerHTML  = '<div class="matchup-loading">Fetching H2H data — using full rosters vs today\'s confirmed starters...</div>';
   document.getElementById('coldMatchupsContainer').innerHTML = '<div class="matchup-loading">This may take 15-30 seconds...</div>';
   _matchupsData = await buildMatchupsList();
@@ -6293,13 +6296,13 @@ async function fetchPitcherVsTeam(pitcherId, teamId) {
     const splits = d?.stats?.[0]?.splits || [];
     if (!splits.length) return null;
     const s = splits[0].stat;
+    console.log('PITCHER_VS_TEAM_RAW:', JSON.stringify(s)); // DEBUG
 
-    // Helper to safely parse stat values — handles "-.--", null, undefined
     const safeFloat = (...vals) => {
       for (const v of vals) {
         if (v === null || v === undefined) continue;
         const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
-        if (!isNaN(n)) return n;
+        if (!isNaN(n) && n > 0) return n;
       }
       return 0;
     };
@@ -6312,17 +6315,24 @@ async function fetchPitcherVsTeam(pitcherId, teamId) {
       return 0;
     };
 
+    const ip   = safeFloat(s.inningsPitched);
+    const er   = safeInt(s.earnedRuns, s.earnedRuns);
+    const h    = safeInt(s.hits);
+    const bb   = safeInt(s.baseOnBalls, s.walks);
+    const k    = safeInt(s.strikeOuts);
+    const hr   = safeInt(s.homeRuns);
+    const gs   = safeInt(s.gamesStarted, s.gamesPlayed);
+
+    // Calculate ERA and WHIP from raw numbers if API doesn't return them
+    const eraRaw  = safeFloat(s.era);
+    const whipRaw = safeFloat(s.whip);
+    const era  = eraRaw  > 0 ? eraRaw  : (ip > 0 ? parseFloat(((er * 9) / ip).toFixed(2)) : 0);
+    const whip = whipRaw > 0 ? whipRaw : (ip > 0 ? parseFloat(((h + bb) / ip).toFixed(2))  : 0);
+
     const result = {
-      gs:   safeInt(s.gamesStarted, s.gamesPlayed),
-      ip:   safeFloat(s.inningsPitched),
-      era:  safeFloat(s.era),
-      whip: safeFloat(s.whip),
-      k:    safeInt(s.strikeOuts),
-      bb:   safeInt(s.baseOnBalls, s.walks),
-      hr:   safeInt(s.homeRuns),
-      h:    safeInt(s.hits),
-      avg:  safeFloat(s.avg, s.battingAverage),
-      ops:  safeFloat(s.ops),
+      gs, ip, era, whip, k, bb, hr, h,
+      avg: safeFloat(s.avg, s.battingAverage),
+      ops: safeFloat(s.ops),
     };
     _pitcherH2HCache[key] = result;
     pitcherH2HCacheSave();
