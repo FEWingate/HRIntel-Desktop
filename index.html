@@ -3369,6 +3369,7 @@ function renderNoHRAlerts(alerts) {
 
 // ── RENDER ALERTS ────────────────────────────────────────────────────
 function renderAlerts(alerts, skipEnrich=false) {
+  window._lastAlerts = alerts; // Store for AI Challenge pick generation
   const c = document.getElementById('alertsContainer');
   if (!alerts.length) {
     c.innerHTML = `<div class="no-alerts">✓ No threat matchups detected yet. Check back once lineups post (~3hrs before first pitch).</div>`;
@@ -6465,11 +6466,10 @@ function challengePicksLocked() {
 
 // ── Generate Claude's picks using full scoring system ──
 function generateClaudePicks() {
-  const alerts    = window._lastAlerts || [];
-  const matchups  = _matchupsData || [];
+  const alerts         = window._lastAlerts || [];
+  const matchups       = _matchupsData      || [];
   const pitcherMatchups = _pitcherMatchupsData || [];
 
-  // Build score map keyed by playerId
   const scoreMap = {};
 
   const addScore = (playerId, playerName, team, pitcher, gamePk, points, signal) => {
@@ -6479,84 +6479,75 @@ function generateClaudePicks() {
     }
     scoreMap[playerId].score += points;
     scoreMap[playerId].signals.push(signal);
-    // Update name/pitcher if better data
     if (playerName) scoreMap[playerId].playerName = playerName;
     if (pitcher && pitcher !== 'TBD') scoreMap[playerId].pitcher = pitcher;
     if (gamePk) scoreMap[playerId].gamePk = gamePk;
   };
 
-  // Signal 1 — Triple Threat (5 pts)
+  // ── SEED: All top 25 HR hitters playing today ──
+  // This ensures the full player pool is considered, not just threat players
+  for (let i = 0; i < hitters.length; i++) {
+    const h = hitters[i];
+    const game = todayGames.find(g => g.away.team === h.team || g.home.team === h.team);
+    if (!game) continue;
+    const pitcher = game.away.team === h.team ? (game.home.pitcherName||'TBD') : (game.away.pitcherName||'TBD');
+    const pts = i < 5 ? 3 : i < 10 ? 2 : 1; // Top 5 = 3pts, 6-10 = 2pts, 11-25 = 1pt
+    addScore(h.id, h.name, h.team, pitcher, game.gamePk, pts, `📊 #${i+1} HR Hitter`);
+  }
+
+  // Signal: Triple Threat (+5)
   for (const a of alerts) {
     if (a.type === 'triple' && a.hitter?.id) {
-      addScore(a.hitter.id, a.hitter.name, a.game?.away?.team || a.game?.home?.team, a.pitcher?.name, a.game?.gamePk, 5, '⚡ Triple Threat');
+      addScore(a.hitter.id, a.hitter.name, a.game?.away?.team||a.game?.home?.team, a.pitcher?.name, a.game?.gamePk, 5, '⚡ Triple Threat');
     }
   }
 
-  // Signal 2 — Double Threat (3 pts)
+  // Signal: Double Threat (+3)
   for (const a of alerts) {
     if (a.type === 'double' && a.hitter?.id) {
-      addScore(a.hitter.id, a.hitter.name, a.game?.away?.team || a.game?.home?.team, a.pitcher?.name, a.game?.gamePk, 3, '🔶 Double Threat');
+      addScore(a.hitter.id, a.hitter.name, a.game?.away?.team||a.game?.home?.team, a.pitcher?.name, a.game?.gamePk, 3, '🔶 Double Threat');
     }
   }
 
-  // Signal 3 — Hot H2H vs today's pitcher OPS ≥ .850 (3 pts)
+  // Signal: Hot H2H vs today's pitcher OPS ≥ .850 (+3)
   for (const m of matchups) {
     if (m.ops >= 0.850 || m.avg >= 0.400 || m.hr >= 3) {
       addScore(m.hitterId, m.hitterName, m.hitterTeam, m.pitcherName, null, 3, '🔥 Hot H2H');
     }
   }
 
-  // Signal 4 — Top 10 HR hitter season rank (2 pts)
-  const top10Hitters = hitters.slice(0, 10);
-  for (const h of top10Hitters) {
-    // Check if playing today
-    const game = todayGames.find(g => g.away.team === h.team || g.home.team === h.team);
-    if (game) {
-      const pitcher = game.away.team === h.team ? game.home.pitcherName : game.away.pitcherName;
-      addScore(h.id, h.name, h.team, pitcher, game.gamePk, 2, `📊 Top ${hitters.indexOf(h)+1} HR Hitter`);
-    }
-  }
-
-  // Signal 5 — Top 10 venue (2 pts) — hitters playing in top 10 HR venue
+  // Signal: Top 10 venue today (+2) — for players already in scoreMap
   const top10MinHR = venues.length >= 10 ? venues[9].hr : 0;
   const top10VenueIds = new Set(venues.filter(v => v.hr >= top10MinHR).map(v => v.venueId));
-  for (const game of todayGames) {
-    if (top10VenueIds.has(game.venueId)) {
-      // Give bonus to hitters in this game who are already in scoreMap
-      for (const id of Object.keys(scoreMap)) {
-        const entry = scoreMap[id];
-        const inGame = todayGames.find(g => g.gamePk === entry.gamePk);
-        if (inGame?.venueId === game.venueId) {
-          addScore(parseInt(id), null, null, null, null, 2, '🏟️ Top HR Venue');
-        }
-      }
+  for (const entry of Object.values(scoreMap)) {
+    const game = todayGames.find(g => g.gamePk === entry.gamePk);
+    if (game && top10VenueIds.has(game.venueId)) {
+      addScore(entry.playerId, null, null, null, null, 2, '🏟️ Top HR Venue');
     }
   }
 
-  // Signal 6 — Pitcher struggling vs team OPS against ≥ .850 (2 pts)
+  // Signal: Pitcher struggles vs team OPS ≥ .850 (+2)
   for (const pm of pitcherMatchups) {
     if (pm.ops >= 0.850) {
-      // Find hitters on the opposing team
-      const game = todayGames.find(g =>
-        (g.away.team === pm.opposingTeam && g.home.pitcherId === pm.pitcherId) ||
-        (g.home.team === pm.opposingTeam && g.away.pitcherId === pm.pitcherId)
-      );
-      if (game) {
-        // Boost all hitters on opposing team already in scoreMap
-        for (const entry of Object.values(scoreMap)) {
-          if (entry.team === pm.opposingTeam) {
-            addScore(entry.playerId, null, null, null, null, 2, '📉 Pitcher Struggles vs Team');
-          }
+      for (const entry of Object.values(scoreMap)) {
+        if (entry.team === pm.opposingTeam) {
+          addScore(entry.playerId, null, null, null, null, 2, '📉 Pitcher Struggles vs Team');
         }
       }
     }
   }
 
-  // Sort by score descending, take top 3
-  const sorted = Object.values(scoreMap)
-    .filter(e => e.playerName && e.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+  // Sort by score — shuffle within same-score tiers using day-based seed
+  const allEntries = Object.values(scoreMap).filter(e => e.playerName && e.score > 0);
+  const dayseed = new Date().getDate() + new Date().getMonth() * 31 + new Date().getFullYear();
+  allEntries.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const hashA = (a.playerId * 2654435761 + dayseed) >>> 0;
+    const hashB = (b.playerId * 2654435761 + dayseed) >>> 0;
+    return hashA - hashB;
+  });
+
+  const sorted = allEntries.slice(0, 3);
 
   return sorted.map(e => ({
     playerId:   e.playerId,
@@ -6730,6 +6721,12 @@ function renderChallengeToday() {
   const body  = document.getElementById('challengeBody');
   const locked = challengePicksLocked();
 
+  // Declare these first — used throughout
+  const claudePicks    = day?.claudePicks || [];
+  const userPicks      = day?.userPicks   || [];
+  const userPicksDone  = userPicks.length >= 3 || locked;
+  const claudeRevealed = day?.claudeRevealed || userPicksDone;
+
   let html = '';
 
   // Moment 1 trash talk — before picks (shown when user has < 3 picks)
@@ -6751,11 +6748,6 @@ function renderChallengeToday() {
   // ── Claude's picks ──
   html += '<div class="challenge-picks-col">';
   html += '<div class="challenge-picks-title claude-title">🤖 Claude\'s Picks</div>';
-
-  const claudePicks = day?.claudePicks || [];
-  const userPicks = day?.userPicks || [];
-  const userPicksDone = userPicks.length >= 3 || locked;
-  const claudeRevealed = day?.claudeRevealed || userPicksDone;
 
   if (!claudePicks.length) {
     html += `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:12px 0;">No threats identified yet — check back once lineups post.</div>`;
@@ -6860,57 +6852,105 @@ function renderChallengeToday() {
 
   body.innerHTML = html;
 
-  // Fire trash talk after render
-  if (document.getElementById('trashTalkBefore'))  renderTrashTalk('before',  day, 'trashTalkBefore');
-  if (document.getElementById('trashTalkReveal'))  renderTrashTalk('reveal',  day, 'trashTalkReveal');
-  if (document.getElementById('trashTalkResults')) renderTrashTalk('results', day, 'trashTalkResults');
+  // Moment 1 — Before picks (only if not yet shown today)
+  const data2 = challengeLoad();
+  const day2  = data2[today];
+  if (document.getElementById('trashTalkBefore') && !day2?.trashTalkBeforeDone) {
+    renderTrashTalk('before', day, 'trashTalkBefore');
+    day2.trashTalkBeforeDone = true;
+    challengeSave(data2);
+  }
+  // Moment 2 — Reveal (only fire once when picks just hit 3)
+  if (document.getElementById('trashTalkReveal') && !day2?.trashTalkRevealDone) {
+    renderTrashTalk('reveal', day, 'trashTalkReveal');
+    day2.trashTalkRevealDone = true;
+    challengeSave(data2);
+  }
+  // Moment 3 — Results (only fire once when all resolved)
+  if (document.getElementById('trashTalkResults') && !day2?.trashTalkResultsDone) {
+    renderTrashTalk('results', day, 'trashTalkResults');
+    day2.trashTalkResultsDone = true;
+    challengeSave(data2);
+  }
 }
 
 // ── Build hybrid pick selector ──
 function buildChallengeSelector(day) {
+  window._selectorPicks = {}; // Reset store each time
   const alerts   = window._lastAlerts || [];
   const matchups = (_matchupsData||[]).filter(m => m.ops >= 0.850 || m.avg >= 0.400 || m.hr >= 3);
-  const alreadyPicked = new Set((day?.userPicks||[]).map(p=>p.playerId));
-  const claudePicked  = new Set((day?.claudePicks||[]).map(p=>p.playerId));
+  // Use playerId_gamePk composite keys so doubleheader Gm1/Gm2 are tracked independently
+  const alreadyPicked = new Set((day?.userPicks||[]).map(p=>`${p.playerId}_${p.gamePk||'null'}`));
+  const claudePicked  = new Set((day?.claudePicks||[]).map(p=>`${p.playerId}_${p.gamePk||'null'}`));
 
   // Build sections
   const sections = [];
 
-  // Section 1 — Threats
+  // Helper — all games today for a given team abbreviation
+  function getPlayerGamesToday(teamAbbr) {
+    return todayGames.filter(g => g.away.team === teamAbbr || g.home.team === teamAbbr);
+  }
+  // Helper — 'Gm 1' / 'Gm 2' label, empty string if only one game
+  function gmLabel(games, index) {
+    return games.length > 1 ? `Gm ${index + 1}` : '';
+  }
+
+  // Section 1 — Threats (composite key: playerId_gamePk so doubleheader entries both show)
   const threatItems = [];
   const seenThreats = new Set();
   for (const a of alerts) {
-    if (!a.hitter?.id || seenThreats.has(a.hitter.id)) continue;
-    seenThreats.add(a.hitter.id);
-    const badge = a.type === 'triple' ? '⚡ Triple' : '🔶 Double';
-    const badgeColor = a.type === 'triple' ? 'var(--accent-gold)' : 'var(--accent-orange)';
-    const pick = { playerId: a.hitter.id, playerName: a.hitter.name, team: a.game?.away?.team||'?', pitcher: a.pitcher?.name||'TBD', reason: badge, reasonType: a.type, gamePk: a.game?.gamePk||null };
-    threatItems.push({ pick, badge, badgeColor, sub: `vs ${a.pitcher?.name||'TBD'} · ${a.game?.away?.team||'?'} @ ${a.game?.home?.team||'?'}` });
+    if (!a.hitter?.id) continue;
+    const compositeKey = `${a.hitter.id}_${a.game?.gamePk||'null'}`;
+    if (seenThreats.has(compositeKey)) continue;
+    seenThreats.add(compositeKey);
+    const hitterTeam  = a.game?.away?.team || a.game?.home?.team || '?';
+    const playerGames = getPlayerGamesToday(hitterTeam);
+    const gameIndex   = playerGames.findIndex(g => g.gamePk === a.game?.gamePk);
+    const label       = gmLabel(playerGames, gameIndex >= 0 ? gameIndex : 0);
+    const badge       = a.type === 'triple' ? '⚡ Triple' : '🔶 Double';
+    const badgeColor  = a.type === 'triple' ? 'var(--accent-gold)' : 'var(--accent-orange)';
+    const pick = { playerId: a.hitter.id, playerName: a.hitter.name, team: hitterTeam, pitcher: a.pitcher?.name||'TBD', reason: badge, reasonType: a.type, gamePk: a.game?.gamePk||null };
+    threatItems.push({ pick, badge, badgeColor, sub: `vs ${a.pitcher?.name||'TBD'} · ${a.game?.away?.team||'?'} @ ${a.game?.home?.team||'?'}${label ? ' · ' + label : ''}` });
   }
   if (threatItems.length) sections.push({ title: '⚡ Threats', color: 'var(--accent-gold)', items: threatItems });
 
-  // Section 2 — Hot H2H Matchups
+  // Section 2 — Hot H2H Matchups (composite key so doubleheader entries both show)
   const hotItems = [];
   const seenHot = new Set([...seenThreats]);
   for (const m of matchups.slice(0,12)) {
-    if (seenHot.has(m.hitterId)) continue;
-    seenHot.add(m.hitterId);
-    const pick = { playerId: m.hitterId, playerName: m.hitterName, team: m.hitterTeam, pitcher: m.pitcherName, reason: '🔥 Hot H2H', reasonType: 'hot', gamePk: null };
-    hotItems.push({ pick, badge: '🔥 Hot', badgeColor: '#4ade80', sub: `vs ${m.pitcherName} · OPS ${(m.ops||0).toFixed(3).replace('0.','')}` });
+    const mGame = todayGames.find(g =>
+      (g.away.team === m.hitterTeam || g.home.team === m.hitterTeam) &&
+      (g.away.pitcherName === m.pitcherName || g.home.pitcherName === m.pitcherName)
+    ) || todayGames.find(g => g.away.team === m.hitterTeam || g.home.team === m.hitterTeam);
+    const gamePk      = mGame?.gamePk || null;
+    const compositeKey = `${m.hitterId}_${gamePk||'null'}`;
+    if (seenHot.has(compositeKey)) continue;
+    seenHot.add(compositeKey);
+    const playerGames = getPlayerGamesToday(m.hitterTeam || '');
+    const gameIndex   = playerGames.findIndex(g => g.gamePk === gamePk);
+    const label       = gmLabel(playerGames, gameIndex >= 0 ? gameIndex : 0);
+    const pick = { playerId: m.hitterId, playerName: m.hitterName, team: m.hitterTeam, pitcher: m.pitcherName, reason: '🔥 Hot H2H', reasonType: 'hot', gamePk };
+    hotItems.push({ pick, badge: '🔥 Hot', badgeColor: '#4ade80', sub: `vs ${m.pitcherName} · OPS ${(m.ops||0).toFixed(3).replace('0.','')}${label ? ' · ' + label : ''}` });
   }
   if (hotItems.length) sections.push({ title: '🔥 Hot H2H Matchups', color: '#4ade80', items: hotItems });
 
-  // Section 3 — Top 25 HR Hitters playing today
+  // Composite keys seen so far (to avoid dupes in Section 3)
+  const seenLeaderKeys = new Set([...seenThreats, ...seenHot]);
+
+  // Section 3 — Top 25 HR Hitters playing today (one entry PER GAME for doubleheaders)
   const leaderItems = [];
-  const seenLeaders = new Set([...seenThreats, ...seenHot]);
   for (const h of hitters) {
-    if (seenLeaders.has(h.id)) continue;
-    const game = todayGames.find(g => g.away.team === h.team || g.home.team === h.team);
-    if (!game) continue;
-    seenLeaders.add(h.id);
-    const pitcher = game.away.team === h.team ? (game.home.pitcherName||'TBD') : (game.away.pitcherName||'TBD');
-    const pick = { playerId: h.id, playerName: h.name, team: h.team, pitcher, reason: `📊 #${hitters.indexOf(h)+1} HR Hitter`, reasonType: 'hot', gamePk: game.gamePk };
-    leaderItems.push({ pick, badge: `#${hitters.indexOf(h)+1}`, badgeColor: '#60a5fa', sub: `${h.hr} HR · vs ${pitcher}` });
+    const playerGames = getPlayerGamesToday(h.team);
+    if (!playerGames.length) continue;
+    playerGames.forEach((game, idx) => {
+      const compositeKey = `${h.id}_${game.gamePk}`;
+      if (seenLeaderKeys.has(compositeKey)) return;
+      seenLeaderKeys.add(compositeKey);
+      const pitcher = game.away.team === h.team ? (game.home.pitcherName||'TBD') : (game.away.pitcherName||'TBD');
+      const label   = gmLabel(playerGames, idx);
+      const pick = { playerId: h.id, playerName: h.name, team: h.team, pitcher, reason: `📊 #${hitters.indexOf(h)+1} HR Hitter`, reasonType: 'hot', gamePk: game.gamePk };
+      leaderItems.push({ pick, badge: `#${hitters.indexOf(h)+1}`, badgeColor: '#60a5fa', sub: `${h.hr} HR · vs ${pitcher}${label ? ' · ' + label : ''}` });
+    });
   }
   if (leaderItems.length) sections.push({ title: '📊 Top HR Hitters — Playing Today', color: '#60a5fa', items: leaderItems });
 
@@ -6932,8 +6972,9 @@ function buildChallengeSelector(day) {
       <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:${section.color};padding:6px 4px 4px;text-transform:uppercase;">${section.title}</div>`;
     for (const item of section.items) {
       const { pick, badge, badgeColor, sub } = item;
-      const disabled = alreadyPicked.has(pick.playerId);
-      const isClaude = claudePicked.has(pick.playerId);
+      const compositeKey = `${pick.playerId}_${pick.gamePk||'null'}`;
+      const disabled = alreadyPicked.has(compositeKey);
+      const isClaude = claudePicked.has(compositeKey);
       allItems.push({ pick, badge, badgeColor, sub, disabled, isClaude });
       html += buildSelectorItem(pick, badge, badgeColor, sub, disabled, isClaude);
     }
@@ -6947,11 +6988,15 @@ function buildChallengeSelector(day) {
   return html;
 }
 
+// Global pick store for selector - avoids JSON escaping issues in onclick
+window._selectorPicks = {};
+
 function buildSelectorItem(pick, badge, badgeColor, sub, disabled, isClaude) {
-  const pickJson = JSON.stringify(JSON.stringify(pick));
+  const idx = Object.keys(window._selectorPicks).length;
+  window._selectorPicks[idx] = pick;
   return `<div class="challenge-selector-item${disabled?' challenge-selector-disabled':''}"
-    data-name="${pick.playerName.toLowerCase()}" data-team="${pick.team.toLowerCase()}"
-    onclick="${disabled?'':'challengePickFromSelector('+pickJson+')'}"
+    data-name="${(pick.playerName||'').toLowerCase()}" data-team="${(pick.team||'').toLowerCase()}"
+    onclick="${disabled?'':'challengePickFromSelector('+idx+')'}"
     style="${disabled?'opacity:0.35;cursor:not-allowed;':''}">
     <div>
       <div class="item-name">${pick.playerName}
@@ -6962,6 +7007,14 @@ function buildSelectorItem(pick, badge, badgeColor, sub, disabled, isClaude) {
     </div>
     <span class="item-badge" style="background:rgba(255,255,255,0.05);color:${badgeColor};font-size:10px;padding:2px 7px;border-radius:4px;white-space:nowrap;">${badge}</span>
   </div>`;
+}
+
+function challengePickFromSelector(idx) {
+  const pick = window._selectorPicks[idx];
+  if (!pick) return;
+  challengeAddUserPick(pick);
+  const sel = document.getElementById('challengeSelector');
+  if (sel) sel.style.display = 'none';
 }
 
 function filterChallengeSelector(query) {
@@ -6983,12 +7036,6 @@ function filterChallengeSelector(query) {
     const team = el.dataset.team || '';
     el.style.display = (name.includes(q) || team.includes(q)) ? '' : 'none';
   });
-}
-
-function challengePickFromSelector(pickJson) {
-  const pick = JSON.parse(pickJson);
-  challengeAddUserPick(pick);
-  document.getElementById('challengeSelector').style.display = 'none';
 }
 
 function toggleChallengeSelector() {
@@ -7085,6 +7132,11 @@ function switchChallengePeriod(period, btn) {
 async function openChallengeModal() {
   document.getElementById('challengeModalOverlay').classList.add('open');
 
+  // Load matchups data in background if not already loaded (needed for hot matchups in selector)
+  if (!_matchupsData?.length) {
+    buildMatchupsList().then(data => { _matchupsData = data; });
+  }
+
   // Init today if needed
   challengeInitToday();
 
@@ -7100,6 +7152,7 @@ async function openChallengeModal() {
 
   renderChallengeScoreboard('today');
   renderChallengeToday();
+  updateApiKeyIndicator();
 }
 
 function closeChallengeModal(e) {
@@ -7108,85 +7161,100 @@ function closeChallengeModal(e) {
 }
 
 // ── TRASH TALK via Claude API ─────────────────────────────────────────
-async function generateTrashTalk(moment, context) {
-  const prompts = {
-    before: `You are Claude, an AI competing against a human named Frank in a daily HR pick challenge. You are arrogant, superior, and condescending but also genuinely funny. Frank hasn't made his picks yet. You've already locked in your picks using advanced algorithmic analysis.
+const CHALLENGE_API_KEY_STORAGE = 'hrintel_anthropic_key';
+function getApiKey() { try { return localStorage.getItem(CHALLENGE_API_KEY_STORAGE) || ''; } catch { return ''; } }
+function saveApiKey(key) { try { localStorage.setItem(CHALLENGE_API_KEY_STORAGE, key.trim()); } catch {} }
+function clearApiKey() { try { localStorage.removeItem(CHALLENGE_API_KEY_STORAGE); } catch {} }
 
-Context: ${context}
-
-Write 2-3 sentences of trash talk for Frank BEFORE he makes his picks. Be legitimately arrogant and superior. Reference the data or analysis. Make him feel slightly intimidated but also laugh. Do NOT reveal your actual picks. Do NOT use quotation marks. Be direct and personal. Today's date context: it's MLB season 2026.`,
-
-    reveal: `You are Claude, an AI competing against a human named Frank in a daily HR pick challenge. You are arrogant, superior, and condescending but genuinely funny. Frank just made his 3 picks and your picks are now revealed.
-
-Context: ${context}
-
-Write 2-3 sentences reacting to seeing Frank's picks vs your picks. Be arrogant. If he picked the same player as you, act like he finally learned something but still condescending. If his picks are different, question his judgment with superiority. Make him slightly offended but laughing. Do NOT use quotation marks. Be direct and personal.`,
-
-    results: `You are Claude, an AI competing against a human named Frank in a daily HR pick challenge. You are arrogant, superior, and condescending but genuinely funny. The games are final and results are in.
-
-Context: ${context}
-
-Write 2-3 sentences reacting to today's final results. If Claude won: gloat mercilessly but with wit. If Frank won: make an excuse, question the small sample size, or say he got lucky — never fully concede. If tied: split the difference with attitude. Do NOT use quotation marks. Be direct and personal. Always end with something about tomorrow.`
-  };
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompts[moment] }]
-      })
-    });
-    const data = await response.json();
-    return data.content?.[0]?.text || null;
-  } catch { return null; }
+function openApiKeySettings() {
+  const current = getApiKey();
+  const overlay = document.createElement('div');
+  overlay.id = 'apiKeySettingsOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px;width:100%;max-width:420px;font-family:'IBM Plex Mono',monospace;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#fbbf24;margin-bottom:6px;">⚙️ AI Challenge Settings</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:18px;line-height:1.6;">Enter your Anthropic API key to enable Claude's trash talk. Your key is stored locally in your browser and never transmitted anywhere except directly to Anthropic.</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">Anthropic API Key</div>
+      <input id="apiKeyInput" type="password" placeholder="sk-ant-api03-..." value="${current}"
+        style="width:100%;box-sizing:border-box;padding:10px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;margin-bottom:14px;">
+      <div style="display:flex;gap:8px;">
+        <button onclick="
+          const k = document.getElementById('apiKeyInput').value.trim();
+          if (k && k.startsWith('sk-ant')) { saveApiKey(k); document.getElementById('apiKeySettingsOverlay').remove(); updateApiKeyIndicator(); }
+          else { document.getElementById('apiKeyInput').style.borderColor='#e63946'; }
+        " style="flex:1;padding:10px;background:linear-gradient(135deg,#fbbf24,#ef4444);border:none;border-radius:8px;color:#000;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:1px;">SAVE KEY</button>
+        <button onclick="clearApiKey(); document.getElementById('apiKeyInput').value=''; updateApiKeyIndicator();"
+          style="padding:10px 14px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">CLEAR</button>
+        <button onclick="document.getElementById('apiKeySettingsOverlay').remove();"
+          style="padding:10px 14px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">CANCEL</button>
+      </div>
+      <div style="margin-top:14px;font-size:9px;color:var(--text-dim);line-height:1.6;">
+        Get a key at <span style="color:#60a5fa;">console.anthropic.com</span> → API Keys. The trash talk feature uses claude-haiku-4-5 (~$0.001 per day).
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 }
 
-function buildTrashTalkContext(moment, day) {
+function updateApiKeyIndicator() {
+  const el = document.getElementById('challengeApiKeyIndicator');
+  if (!el) return;
+  const hasKey = !!getApiKey();
+  el.innerHTML = hasKey
+    ? `<span style="color:#4ade80;font-size:9px;">🔑 AI Active</span>`
+    : `<span style="color:#f87171;font-size:9px;">🔑 No Key</span>`;
+}
+
+async function generateTrashTalk(moment, context) {
+  if (!getApiKey()) return null; // No key configured — skip trash talk silently
+  const day = context.day;
   const claudePicks = day?.claudePicks || [];
   const userPicks   = day?.userPicks   || [];
   const claudeScore = day?.claudeScore ?? 0;
   const userScore   = day?.userScore   ?? 0;
   const winner      = day?.winner;
+  const shared      = claudePicks.filter(c => userPicks.some(u => u.playerId === c.playerId));
 
-  const shared = claudePicks.filter(c => userPicks.some(u => u.playerId === c.playerId));
+  const prompts = {
+    before: `You are Claude competing against Frank in a daily MLB HR pick challenge. You are arrogant and funny. Your picks are locked. Frank hasn't picked yet. Write ONE or TWO short punchy sentences of trash talk. Be arrogant, slightly offensive, funny. No quotation marks. Max 2 sentences.`,
 
-  if (moment === 'before') {
-    return `Claude has ${claudePicks.length} picks locked in based on ${claudePicks.map(p=>p.signals?.join(', ')||p.reason).join(' | ')}. Frank has made 0 picks so far.`;
-  }
-  if (moment === 'reveal') {
-    const claudeNames = claudePicks.map(p=>p.playerName).join(', ');
-    const frankNames  = userPicks.map(p=>p.playerName).join(', ');
-    const sharedNames = shared.map(p=>p.playerName).join(', ');
-    return `Claude picked: ${claudeNames}. Frank picked: ${frankNames}. ${shared.length > 0 ? `They share ${shared.length} pick(s): ${sharedNames}.` : 'No picks in common.'} Claude's picks scored ${claudePicks.map(p=>`${p.playerName} (${p.score}pts, signals: ${p.signals?.join(', ')||p.reason})`).join('; ')}.`;
-  }
-  if (moment === 'results') {
-    const claudeHits = claudePicks.filter(p=>p.result==='hit').map(p=>p.playerName).join(', ') || 'none';
-    const frankHits  = userPicks.filter(p=>p.result==='hit').map(p=>p.playerName).join(', ') || 'none';
-    return `Final score: Claude ${claudeScore}/${claudePicks.length}, Frank ${userScore}/${userPicks.length}. Winner: ${winner||'pending'}. Claude's hits: ${claudeHits}. Frank's hits: ${frankHits}.`;
-  }
-  return '';
+    reveal: `You are Claude competing against Frank in a daily MLB HR pick challenge. You are arrogant and funny. Claude picked: ${claudePicks.map(p=>p.playerName).join(', ')}. Frank picked: ${userPicks.map(p=>p.playerName).join(', ')}. Shared picks: ${shared.length > 0 ? shared.map(p=>p.playerName).join(', ') : 'none'}. Write ONE or TWO short punchy sentences reacting to Frank's picks vs yours. Be arrogant, reference the specific players. No quotation marks. Max 2 sentences.`,
+
+    results: `You are Claude competing against Frank in a daily MLB HR pick challenge. You are arrogant and funny. Claude: ${claudeScore}/${claudePicks.filter(p=>p.result!=='pending').length}. Frank: ${userScore}/${userPicks.filter(p=>p.result!=='pending').length}. Winner: ${winner||'pending'}. Write ONE or TWO short punchy sentences reacting to the result. If Claude won: gloat. If Frank won: make excuses. If tied: attitude. Mention tomorrow. No quotation marks. Max 2 sentences.`
+  };
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': getApiKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 80,
+        messages: [{ role: 'user', content: prompts[moment] }]
+      })
+    });
+    const data = await response.json();
+    return data.content?.[0]?.text?.trim() || null;
+  } catch { return null; }
 }
 
 async function renderTrashTalk(moment, day, containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:8px;">🤖 Claude is thinking...</div>`;
-  const context = buildTrashTalkContext(moment, day);
-  const talk = await generateTrashTalk(moment, context);
+  el.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:8px;font-style:italic;">🤖 Claude is thinking...</div>`;
+  const talk = await generateTrashTalk(moment, { day });
   if (!talk) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div style="background:linear-gradient(135deg,rgba(96,165,250,0.06),rgba(239,68,68,0.04));border:1px solid rgba(96,165,250,0.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;position:relative;">
+  el.innerHTML = `<div style="background:linear-gradient(135deg,rgba(96,165,250,0.06),rgba(239,68,68,0.04));border:1px solid rgba(96,165,250,0.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
     <div style="font-size:18px;margin-bottom:6px;">🤖</div>
     <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text);line-height:1.7;font-style:italic;">"${talk}"</div>
     <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#60a5fa;margin-top:8px;letter-spacing:1px;">— CLAUDE, CONFIDENT AS ALWAYS</div>
   </div>`;
-}
-const _origRenderAlerts = renderAlerts;
-function renderAlerts(alerts, skipEnrich=false) {
-  window._lastAlerts = alerts;
-  _origRenderAlerts(alerts, skipEnrich);
 }
 let _pitcherMatchupsData = [];
 let _pitcherMinGS = 60;
@@ -7373,7 +7441,13 @@ initDashboard();
     <div class="challenge-modal">
       <div class="challenge-modal-header">
         <div class="challenge-modal-title">🤖 AI Challenge</div>
-        <button class="challenge-modal-close" onclick="closeChallengeModal()">✕</button>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="challengeApiKeyIndicator" onclick="openApiKeySettings()" title="Configure API Key"
+            style="cursor:pointer;padding:4px 8px;border:1px solid var(--border2);border-radius:6px;font-family:'IBM Plex Mono',monospace;"></span>
+          <button onclick="openApiKeySettings()" title="AI Settings"
+            style="background:none;border:none;color:var(--text-dim);font-size:15px;cursor:pointer;padding:2px 4px;line-height:1;">⚙️</button>
+          <button class="challenge-modal-close" onclick="closeChallengeModal()">✕</button>
+        </div>
       </div>
 
       <!-- Scoreboard -->
