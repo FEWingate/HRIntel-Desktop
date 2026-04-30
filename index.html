@@ -6856,21 +6856,15 @@ function renderChallengeToday() {
   const data2 = challengeLoad();
   const day2  = data2[today];
   if (document.getElementById('trashTalkBefore') && !day2?.trashTalkBeforeDone) {
-    renderTrashTalk('before', day, 'trashTalkBefore');
-    day2.trashTalkBeforeDone = true;
-    challengeSave(data2);
+    renderTrashTalk('before', day, 'trashTalkBefore', today);
   }
   // Moment 2 — Reveal (only fire once when picks just hit 3)
   if (document.getElementById('trashTalkReveal') && !day2?.trashTalkRevealDone) {
-    renderTrashTalk('reveal', day, 'trashTalkReveal');
-    day2.trashTalkRevealDone = true;
-    challengeSave(data2);
+    renderTrashTalk('reveal', day, 'trashTalkReveal', today);
   }
   // Moment 3 — Results (only fire once when all resolved)
   if (document.getElementById('trashTalkResults') && !day2?.trashTalkResultsDone) {
-    renderTrashTalk('results', day, 'trashTalkResults');
-    day2.trashTalkResultsDone = true;
-    challengeSave(data2);
+    renderTrashTalk('results', day, 'trashTalkResults', today);
   }
 }
 
@@ -7192,6 +7186,41 @@ function openApiKeySettings() {
       <div style="margin-top:14px;font-size:9px;color:var(--text-dim);line-height:1.6;">
         Get a key at <span style="color:#60a5fa;">console.anthropic.com</span> → API Keys. The trash talk feature uses claude-haiku-4-5 (~$0.001 per day).
       </div>
+      <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;">
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">⚠️ Data Management</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="
+            const today = new Date().toISOString().slice(0,10);
+            const d = challengeLoad();
+            if (d[today]) {
+              delete d[today].trashTalkBeforeDone;
+              delete d[today].trashTalkRevealDone;
+              delete d[today].trashTalkResultsDone;
+              challengeSave(d);
+              alert('Trash talk flags reset — re-open the challenge to trigger it.');
+            } else { alert('No data for today yet.'); }
+          " style="padding:8px 12px;background:transparent;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;">RESET TRASH TALK</button>
+          <button onclick="
+            const today = new Date().toISOString().slice(0,10);
+            if (confirm('Reset ALL of today\'s picks and data?')) {
+              const d = challengeLoad();
+              delete d[today];
+              challengeSave(d);
+              document.getElementById('apiKeySettingsOverlay').remove();
+              renderChallengeScoreboard('today');
+              renderChallengeToday();
+            }
+          " style="padding:8px 12px;background:transparent;border:1px solid #e63946;border-radius:6px;color:#e63946;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;">RESET TODAY</button>
+          <button onclick="
+            if (confirm('Clear ALL challenge history? This cannot be undone.')) {
+              localStorage.removeItem('hrintel_challenge_v1');
+              document.getElementById('apiKeySettingsOverlay').remove();
+              renderChallengeScoreboard('today');
+              renderChallengeToday();
+            }
+          " style="padding:8px 12px;background:transparent;border:1px solid #e63946;border-radius:6px;color:#e63946;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;">CLEAR ALL DATA</button>
+        </div>
+      </div>
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
@@ -7244,12 +7273,21 @@ async function generateTrashTalk(moment, context) {
   } catch { return null; }
 }
 
-async function renderTrashTalk(moment, day, containerId) {
+async function renderTrashTalk(moment, day, containerId, dateKey) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:8px;font-style:italic;">🤖 Claude is thinking...</div>`;
   const talk = await generateTrashTalk(moment, { day });
   if (!talk) { el.innerHTML = ''; return; }
+  // Only mark done AFTER a successful API response
+  if (dateKey) {
+    const d2 = challengeLoad();
+    if (d2[dateKey]) {
+      const flagMap = { before: 'trashTalkBeforeDone', reveal: 'trashTalkRevealDone', results: 'trashTalkResultsDone' };
+      d2[dateKey][flagMap[moment]] = true;
+      challengeSave(d2);
+    }
+  }
   el.innerHTML = `<div style="background:linear-gradient(135deg,rgba(96,165,250,0.06),rgba(239,68,68,0.04));border:1px solid rgba(96,165,250,0.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
     <div style="font-size:18px;margin-bottom:6px;">🤖</div>
     <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text);line-height:1.7;font-style:italic;">"${talk}"</div>
