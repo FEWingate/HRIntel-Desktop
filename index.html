@@ -6785,7 +6785,10 @@ function challengeAddUserPick(pick) {
   if ((day.userPicks||[]).length >= 3) { alert('You already have 3 picks!'); return; }
   if ((day.userPicks||[]).find(p => p.playerId === pick.playerId)) { alert('Already picked!'); return; }
 
-  day.userPicks = [...(day.userPicks||[]), { ...pick, result: 'pending', hrCount: 0 }];
+  // Enrich with pitcherId from todayGames so handedness displays on Frank's cards
+  const fGame = todayGames.find(g => g.gamePk === pick.gamePk);
+  const fPitcherId = fGame ? (fGame.away.team === pick.team ? fGame.home.pitcherId : fGame.away.pitcherId) : null;
+  day.userPicks = [...(day.userPicks||[]), { ...pick, pitcherId: fPitcherId || pick.pitcherId || null, result: 'pending', hrCount: 0 }];
   // Reveal Claude's picks when user has made all 3
   if (day.userPicks.length >= 3) day.claudeRevealed = true;
   challengeSave(data);
@@ -6906,11 +6909,11 @@ function renderChallengeToday() {
       const badgeColor = p.reasonType === 'triple' ? 'var(--accent-gold)' : p.reasonType === 'double' ? 'var(--accent-orange)' : '#4ade80';
       const resultCls  = p.result === 'hit' ? 'hit' : p.result === 'miss' ? 'miss' : 'pending';
       const resultIcon = p.result === 'hit' ? '✓' : p.result === 'miss' ? '✗' : '□';
-      const scoreTag   = p.score ? ` · <span style="color:var(--text-dim);">${p.score}pts</span>` : '';
+      const scoreTag   = p.score ? ` · <span style="color:#ffffff;font-weight:700;">${p.score}pts</span>` : '';
 
       // Factor breakdown pills
       const factorHtml = (p.factors||[]).map(f =>
-        `<span style="display:inline-block;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:9px;color:#ffffff;margin:2px 2px 0 0;">${f.label}${f.pts > 0 ? ' +'+f.pts : ''}</span>`
+        `<span style="display:inline-block;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:9px;color:#ffffff;margin:2px 2px 0 0;">${f.label}${f.pts > 0 ? ' <strong style=\"color:#fbbf24\">+'+f.pts+'</strong>' : ''}</span>`
       ).join('');
 
       // Scouting explanation — use stored explanation or placeholder
@@ -6920,20 +6923,22 @@ function renderChallengeToday() {
         ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#ffffff;line-height:1.7;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;">"${existingExpl}"</div>`
         : `<div id="${explanationId}" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#ffffff;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;">🤖 Loading scouting report...</div>`;
 
-      // Team color (use lightened version for dark bg readability)
-      const teamClr  = tickerTeamColor(p.team) || '#e2e8f0';
-      const batHand  = p.pitcherId ? (batHandCache[p.playerId] ? `[${batHandCache[p.playerId]}]` : '') : '';
+      // Team color, handedness
+      const teamClr    = tickerTeamColor(p.team) || '#e2e8f0';
+      const batHand    = batHandCache[p.playerId] ? `[${batHandCache[p.playerId]}]` : '';
+      const pitHand    = p.pitcherId ? (handednessCache[p.pitcherId] ? `[${handednessCache[p.pitcherId]}HP]` : '') : '';
       html += `<div class="challenge-pick-card ${cls}">
         <div class="challenge-pick-body" style="width:100%;">
           <div class="challenge-pick-badge" style="color:${badgeColor};">${p.reason}${scoreTag}</div>
           <div class="challenge-pick-name">
             ${p.playerName}
-            ${batHand ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:6px;">${batHand}</span>` : ''}
+            ${batHand ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#e2e8f0;font-weight:600;margin-left:6px;">${batHand}</span>` : ''}
             <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${teamClr};margin-left:6px;">${p.team}</span>
           </div>
           <div class="challenge-pick-sub">
             <span style="color:#e63946;font-weight:600;">vs</span>
             <span style="color:#c084fc;margin-left:4px;">${p.pitcher}</span>
+            ${pitHand ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#e2e8f0;font-weight:600;margin-left:4px;">${pitHand}</span>` : ''}
             ${p.venueName ? `<span style="color:var(--text-dim);margin:0 3px;">·</span><span style="color:#fbbf24;">${p.venueName}</span>` : ''}
           </div>
           <div style="margin-top:5px;">${factorHtml}</div>
@@ -6959,19 +6964,21 @@ function renderChallengeToday() {
     const resultCls  = p.result === 'hit' ? 'hit' : p.result === 'miss' ? 'miss' : 'pending';
     const resultIcon = p.result === 'hit' ? '✓' : p.result === 'miss' ? '✗' : '□';
     const sameAsClaude = claudeRevealed && claudePicks.some(c => c.playerId === p.playerId);
-    const fTeamClr = tickerTeamColor(p.team) || '#e2e8f0';
-    const fBatHand = batHandCache[p.playerId] ? `[${batHandCache[p.playerId]}]` : '';
+    const fTeamClr  = tickerTeamColor(p.team) || '#e2e8f0';
+    const fBatHand  = batHandCache[p.playerId] ? `[${batHandCache[p.playerId]}]` : '';
+    const fPitHand  = p.pitcherId ? (handednessCache[p.pitcherId] ? `[${handednessCache[p.pitcherId]}HP]` : '') : '';
     html += `<div class="challenge-pick-card user">
       <div class="challenge-pick-body">
         <div class="challenge-pick-badge" style="color:#fbbf24;">👤 MY PICK${sameAsClaude ? ' &nbsp;<span style="color:#60a5fa;font-size:9px;">🤝 Same as Claude!</span>' : ''}</div>
         <div class="challenge-pick-name">
           ${p.playerName}
-          ${fBatHand ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:6px;">${fBatHand}</span>` : ''}
+          ${fBatHand ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#e2e8f0;font-weight:600;margin-left:6px;">${fBatHand}</span>` : ''}
           <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${fTeamClr};margin-left:6px;">${p.team}</span>
         </div>
         <div class="challenge-pick-sub">
           <span style="color:#e63946;font-weight:600;">vs</span>
           <span style="color:#c084fc;margin-left:4px;">${p.pitcher}</span>
+          ${fPitHand ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#e2e8f0;font-weight:600;margin-left:4px;">${fPitHand}</span>` : ''}
           ${!locked ? `<span onclick="challengeRemoveUserPick(${p.playerId})" style="color:#e63946;cursor:pointer;margin-left:8px;">✕ remove</span>` : ''}
         </div>
       </div>
