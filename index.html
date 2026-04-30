@@ -3098,6 +3098,7 @@ async function fetchTodayGames() {
     return {
       gamePk: g.gamePk,
       time: formatTime(g.gameDate),
+      gameDate: g.gameDate || null, // raw ISO string for cutoff comparison
       venue: g.venue?.name||'—', venueId: g.venue?.id,
       isLive, isFinal, inningHalf, inningOrd,
       awayRuns, homeRuns, detailedState,
@@ -6444,7 +6445,7 @@ function closeMatchupsModal(e) {
 // ── AI CHALLENGE ─────────────────────────────────────────────────────
 const CHALLENGE_KEY = 'hrintel_ai_challenge_v1';
 const CHALLENGE_USER_NAME = 'Frank';
-const CHALLENGE_CUTOFF_HOUR = 12; // noon
+const CHALLENGE_CUTOFF_HOUR = 13; // 1pm — locks before most day games, gives time for lineups
 let _challengePeriod = 'today';
 
 // ── Storage ──
@@ -6461,7 +6462,10 @@ function challengeDateKey(d) {
 
 // ── Check if picks are locked (after noon) ──
 function challengePicksLocked() {
-  return new Date().getHours() >= CHALLENGE_CUTOFF_HOUR;
+  const now = new Date();
+  // Lock at 1:00pm sharp — no minutes grace period. NO CHEATING.
+  return now.getHours() > CHALLENGE_CUTOFF_HOUR ||
+         (now.getHours() === CHALLENGE_CUTOFF_HOUR && now.getMinutes() >= 0);
 }
 
 // ── Generate Claude's picks — full lineup pool with all available signals ──
@@ -6515,7 +6519,19 @@ function generateClaudePicks() {
   // ── SCORE EVERY LINEUP PLAYER ─────────────────────────────────────────────
   const pool = []; // { playerId, playerName, team, pitcher, pitcherId, gamePk, venueId, score, factors }
 
+  // Cutoff timestamp — 1pm local time today
+  const cutoffToday = new Date();
+  cutoffToday.setHours(CHALLENGE_CUTOFF_HOUR, 0, 0, 0);
+
   for (const game of todayGames) {
+    // Skip games that start at or after the 1pm cutoff
+    // This prevents Claude from picking Gm 2 of doubleheaders or late games
+    // that Frank cannot pick (since his selector also respects the cutoff)
+    if (game.gameDate) {
+      const gameStart = new Date(game.gameDate);
+      if (gameStart >= cutoffToday) continue; // NO CHEATING
+    }
+
     const venueData = venueRankMap[game.venueId] || null;
 
     for (const side of ['away', 'home']) {
@@ -6765,7 +6781,7 @@ function challengeAddUserPick(pick) {
   if (!data[today]) challengeInitToday();
   const day = data[today];
 
-  if (challengePicksLocked()) { alert('Picks are locked after noon!'); return; }
+  if (challengePicksLocked()) { alert('Picks are locked after 1pm! No cheating.'); return; }
   if ((day.userPicks||[]).length >= 3) { alert('You already have 3 picks!'); return; }
   if ((day.userPicks||[]).find(p => p.playerId === pick.playerId)) { alert('Already picked!'); return; }
 
@@ -6852,9 +6868,13 @@ function renderChallengeToday() {
   if (!locked) {
     const now = new Date();
     const hoursLeft = CHALLENGE_CUTOFF_HOUR - now.getHours();
-    html += `<div class="challenge-cutoff">⏰ Picks lock at noon · ${hoursLeft} hour${hoursLeft!==1?'s':''} remaining</div>`;
+    const nowM = new Date();
+    const cutoffMs = new Date(nowM.getFullYear(), nowM.getMonth(), nowM.getDate(), CHALLENGE_CUTOFF_HOUR, 0, 0) - nowM;
+    const minsLeft = Math.max(0, Math.floor(cutoffMs / 60000));
+    const timeLeft = minsLeft >= 60 ? `${Math.floor(minsLeft/60)}h ${minsLeft%60}m` : `${minsLeft}m`;
+    html += `<div class="challenge-cutoff">⏰ Picks lock at 1pm · ${timeLeft} remaining</div>`;
   } else {
-    html += `<div class="challenge-cutoff" style="border-color:rgba(230,57,70,0.2);background:rgba(230,57,70,0.05);color:#e63946;">🔒 Picks locked — noon cutoff passed</div>`;
+    html += `<div class="challenge-cutoff" style="border-color:rgba(230,57,70,0.2);background:rgba(230,57,70,0.05);color:#e63946;">🔒 Picks locked — 1pm cutoff passed. No cheating.</div>`;
   }
 
   html += '<div class="challenge-picks-grid">';
@@ -6890,15 +6910,15 @@ function renderChallengeToday() {
 
       // Factor breakdown pills
       const factorHtml = (p.factors||[]).map(f =>
-        `<span style="display:inline-block;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:9px;color:var(--text-dim);margin:2px 2px 0 0;">${f.label}${f.pts > 0 ? ' +'+f.pts : ''}</span>`
+        `<span style="display:inline-block;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:9px;color:#ffffff;margin:2px 2px 0 0;">${f.label}${f.pts > 0 ? ' +'+f.pts : ''}</span>`
       ).join('');
 
       // Scouting explanation — use stored explanation or placeholder
       const explanationId = `scout-${p.playerId}-${pi}`;
       const existingExpl  = p.explanation || '';
       const explanationHtml = existingExpl
-        ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-mid);line-height:1.7;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;">"${existingExpl}"</div>`
-        : `<div id="${explanationId}" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;">🤖 Loading scouting report...</div>`;
+        ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#ffffff;line-height:1.7;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;">"${existingExpl}"</div>`
+        : `<div id="${explanationId}" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#ffffff;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;">🤖 Loading scouting report...</div>`;
 
       html += `<div class="challenge-pick-card ${cls}">
         <div class="challenge-pick-body" style="width:100%;">
@@ -7013,9 +7033,15 @@ function buildChallengeSelector(day) {
   // Build sections
   const sections = [];
 
-  // Helper — all games today for a given team abbreviation
+  // Helper — all ELIGIBLE games today (before 1pm cutoff) for a given team
+  const cutoffTs = new Date();
+  cutoffTs.setHours(CHALLENGE_CUTOFF_HOUR, 0, 0, 0);
   function getPlayerGamesToday(teamAbbr) {
-    return todayGames.filter(g => g.away.team === teamAbbr || g.home.team === teamAbbr);
+    return todayGames.filter(g => {
+      if (g.away.team !== teamAbbr && g.home.team !== teamAbbr) return false;
+      if (g.gameDate && new Date(g.gameDate) >= cutoffTs) return false; // post-cutoff game
+      return true;
+    });
   }
   // Helper — 'Gm 1' / 'Gm 2' label, empty string if only one game
   function gmLabel(games, index) {
