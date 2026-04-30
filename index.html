@@ -6464,11 +6464,11 @@ function challengePicksLocked() {
   return new Date().getHours() >= CHALLENGE_CUTOFF_HOUR;
 }
 
-// ── Generate Claude's picks using full scoring system ──
+// ── Generate Claude's picks — full lineup pool with all available signals ──
 function generateClaudePicks() {
-  const alerts         = window._lastAlerts || [];
-  const matchups       = _matchupsData      || [];
-  const pitcherMatchups = _pitcherMatchupsData || [];
+  const alerts          = window._lastAlerts      || [];
+  const matchups        = _matchupsData           || [];
+  const pitcherMatchups = _pitcherMatchupsData    || [];
 
   const scoreMap = {};
 
@@ -6478,85 +6478,146 @@ function generateClaudePicks() {
       scoreMap[playerId] = { playerId, playerName, team, pitcher, gamePk, score: 0, signals: [] };
     }
     scoreMap[playerId].score += points;
-    scoreMap[playerId].signals.push(signal);
+    if (!scoreMap[playerId].signals.includes(signal)) scoreMap[playerId].signals.push(signal);
     if (playerName) scoreMap[playerId].playerName = playerName;
     if (pitcher && pitcher !== 'TBD') scoreMap[playerId].pitcher = pitcher;
     if (gamePk) scoreMap[playerId].gamePk = gamePk;
   };
 
-  // ── SEED: All top 25 HR hitters playing today ──
-  // This ensures the full player pool is considered, not just threat players
-  for (let i = 0; i < hitters.length; i++) {
-    const h = hitters[i];
-    const game = todayGames.find(g => g.away.team === h.team || g.home.team === h.team);
-    if (!game) continue;
-    const pitcher = game.away.team === h.team ? (game.home.pitcherName||'TBD') : (game.away.pitcherName||'TBD');
-    const pts = i < 5 ? 3 : i < 10 ? 2 : 1; // Top 5 = 3pts, 6-10 = 2pts, 11-25 = 1pt
-    addScore(h.id, h.name, h.team, pitcher, game.gamePk, pts, `📊 #${i+1} HR Hitter`);
-  }
+  // ── PRE-BUILD LOOKUP STRUCTURES ──────────────────────────────────────
 
-  // Signal: Triple Threat (+5)
-  for (const a of alerts) {
-    if (a.type === 'triple' && a.hitter?.id) {
-      addScore(a.hitter.id, a.hitter.name, a.game?.away?.team||a.game?.home?.team, a.pitcher?.name, a.game?.gamePk, 5, '⚡ Triple Threat');
-    }
-  }
+  // Top-25 HR hitter lookup: playerId -> rank (1-based)
+  const hitterRankMap = {};
+  hitters.forEach((h, i) => { hitterRankMap[h.id] = i + 1; });
 
-  // Signal: Double Threat (+3)
-  for (const a of alerts) {
-    if (a.type === 'double' && a.hitter?.id) {
-      addScore(a.hitter.id, a.hitter.name, a.game?.away?.team||a.game?.home?.team, a.pitcher?.name, a.game?.gamePk, 3, '🔶 Double Threat');
-    }
-  }
+  // HR-prone pitcher lookup: pitcherId -> rank
+  const hrPitcherRankMap = {};
+  hrPitchers.forEach((p, i) => { hrPitcherRankMap[p.id] = i + 1; });
 
-  // Signal: Hot H2H vs today's pitcher OPS ≥ .850 (+3)
-  for (const m of matchups) {
-    if (m.ops >= 0.850 || m.avg >= 0.400 || m.hr >= 3) {
-      addScore(m.hitterId, m.hitterName, m.hitterTeam, m.pitcherName, null, 3, '🔥 Hot H2H');
-    }
-  }
-
-  // Signal: Top 10 venue today (+2) — for players already in scoreMap
+  // Top-10 HR venue ids
   const top10MinHR = venues.length >= 10 ? venues[9].hr : 0;
   const top10VenueIds = new Set(venues.filter(v => v.hr >= top10MinHR).map(v => v.venueId));
-  for (const entry of Object.values(scoreMap)) {
-    const game = todayGames.find(g => g.gamePk === entry.gamePk);
-    if (game && top10VenueIds.has(game.venueId)) {
-      addScore(entry.playerId, null, null, null, null, 2, '🏟️ Top HR Venue');
+
+  // Alert lookups: hitterId_gamePk -> type
+  const alertMap = {};
+  for (const a of alerts) {
+    if (!a.hitter?.id) continue;
+    const key = `${a.hitter.id}_${a.game?.gamePk||''}`;
+    alertMap[key] = { type: a.type, pitcherName: a.pitcher?.name, gamePk: a.game?.gamePk };
+  }
+
+  // Hot H2H lookup: hitterId -> matchup
+  const h2hMap = {};
+  for (const m of matchups) {
+    if (m.ops >= 0.850 || m.avg >= 0.400 || m.hr >= 3) {
+      h2hMap[m.hitterId] = m;
     }
   }
 
-  // Signal: Pitcher struggles vs team OPS ≥ .850 (+2)
-  for (const pm of pitcherMatchups) {
-    if (pm.ops >= 0.850) {
-      for (const entry of Object.values(scoreMap)) {
-        if (entry.team === pm.opposingTeam) {
-          addScore(entry.playerId, null, null, null, null, 2, '📉 Pitcher Struggles vs Team');
+  // Pitcher struggles vs team: opposingTeam -> true
+  const pitcherStrugglesTeams = new Set(
+    pitcherMatchups.filter(pm => pm.ops >= 0.850).map(pm => pm.opposingTeam)
+  );
+
+  // ── SEED: EVERY confirmed lineup player across all today's games ──────
+  // This is the full player pool — not just top-25 HR hitters
+  for (const game of todayGames) {
+    for (const side of ['away', 'home']) {
+      const battingTeam   = game[side];
+      const fieldingSide  = side === 'away' ? 'home' : 'away';
+      const fieldingTeam  = game[fieldingSide];
+      const pitcherName   = fieldingTeam.pitcherName || 'TBD';
+      const pitcherId     = fieldingTeam.pitcherId;
+      const lineup        = battingTeam.lineup || [];
+
+      // Fall back to top-25 hitters on this team if no confirmed lineup yet
+      const players = lineup.length > 0
+        ? lineup.map(p => ({ id: p.id, name: p.name, team: battingTeam.team }))
+        : hitters.filter(h => h.team === battingTeam.team).map(h => ({ id: h.id, name: h.name, team: h.team }));
+
+      for (const player of players) {
+        if (!player.id || !player.name) continue;
+
+        // Seed every player into the pool with 0 base score
+        addScore(player.id, player.name, battingTeam.team, pitcherName, game.gamePk, 0, '⚾ In Lineup');
+
+        // ── SIGNAL 1: Triple Threat (+5) ──
+        const alertKey = `${player.id}_${game.gamePk||''}`;
+        const alert = alertMap[alertKey] || Object.values(alertMap).find(a =>
+          alerts.find(al => al.hitter?.id === player.id && al.game?.gamePk === game.gamePk)
+        );
+        const alertDirect = alerts.find(al => al.hitter?.id === player.id && al.game?.gamePk === game.gamePk);
+        if (alertDirect?.type === 'triple') {
+          addScore(player.id, null, null, null, null, 5, '⚡ Triple Threat');
+        }
+        // ── SIGNAL 2: Double Threat (+3) ──
+        else if (alertDirect?.type === 'double') {
+          addScore(player.id, null, null, null, null, 3, '🔶 Double Threat');
+        }
+
+        // ── SIGNAL 3: Top-25 HR hitter rank bonus ──
+        const rank = hitterRankMap[player.id];
+        if (rank) {
+          const pts = rank <= 5 ? 3 : rank <= 10 ? 2 : 1;
+          addScore(player.id, null, null, null, null, pts, `📊 #${rank} HR Hitter`);
+        }
+
+        // ── SIGNAL 4: Facing top-25 HR-allowed pitcher (+2) ──
+        if (pitcherId && hrPitcherRankMap[pitcherId] && hrPitcherRankMap[pitcherId] <= 25) {
+          addScore(player.id, null, null, null, null, 2, `🎯 Pitcher #${hrPitcherRankMap[pitcherId]} HR-Allowed`);
+        }
+
+        // ── SIGNAL 5: Top-10 HR venue (+2) ──
+        if (top10VenueIds.has(game.venueId)) {
+          addScore(player.id, null, null, null, null, 2, '🏟️ Top HR Venue');
+        }
+
+        // ── SIGNAL 6: Hot H2H vs today's pitcher (+3) ──
+        if (h2hMap[player.id]) {
+          addScore(player.id, null, null, null, null, 3, '🔥 Hot H2H');
+        }
+
+        // ── SIGNAL 7: Pitcher struggles vs this team (+2) ──
+        if (pitcherStrugglesTeams.has(battingTeam.team)) {
+          addScore(player.id, null, null, null, null, 2, '📉 Pitcher Struggles vs Team');
+        }
+
+        // ── SIGNAL 8: Handedness advantage (+1) ──
+        // R batter vs LHP, or L batter vs RHP = favorable
+        const batterHand  = batHandCache[player.id];
+        const pitcherHand = pitcherId ? handednessCache[pitcherId] : null;
+        if (batterHand && pitcherHand) {
+          const advantage = (batterHand === 'R' && pitcherHand === 'L') ||
+                            (batterHand === 'L' && pitcherHand === 'R');
+          if (advantage) addScore(player.id, null, null, null, null, 1, '✋ Handedness Edge');
         }
       }
     }
   }
 
-  // Sort by score — shuffle within same-score tiers using day-based seed
-  const allEntries = Object.values(scoreMap).filter(e => e.playerName && e.score > 0);
-  const dayseed = new Date().getDate() + new Date().getMonth() * 31 + new Date().getFullYear();
+  // ── FILTER: Only keep players with at least 1 meaningful signal (score > 0) ──
+  const allEntries = Object.values(scoreMap).filter(e =>
+    e.playerName && e.score > 0 && !e.signals.every(s => s === '⚾ In Lineup')
+  );
+
+  // ── SORT: By score desc, then weighted random within same-score tiers ──
+  // True randomness within tiers so picks vary day to day
   allEntries.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
-    const hashA = (a.playerId * 2654435761 + dayseed) >>> 0;
-    const hashB = (b.playerId * 2654435761 + dayseed) >>> 0;
-    return hashA - hashB;
+    return Math.random() - 0.5; // genuine random tiebreak
   });
 
-  const sorted = allEntries.slice(0, 3);
+  const top3 = allEntries.slice(0, 3);
 
-  return sorted.map(e => ({
+  return top3.map(e => ({
     playerId:   e.playerId,
     playerName: e.playerName,
     team:       e.team || '—',
     pitcher:    e.pitcher || 'TBD',
-    reason:     e.signals[0] || '📊 Analysis',
-    reasonType: e.signals.includes('⚡ Triple Threat') ? 'triple' : e.signals.includes('🔶 Double Threat') ? 'double' : 'hot',
-    signals:    e.signals,
+    reason:     e.signals.find(s => s !== '⚾ In Lineup') || '📊 Analysis',
+    reasonType: e.signals.includes('⚡ Triple Threat') ? 'triple'
+              : e.signals.includes('🔶 Double Threat') ? 'double' : 'hot',
+    signals:    e.signals.filter(s => s !== '⚾ In Lineup'),
     score:      e.score,
     result:     'pending',
     hrCount:    0,
@@ -7190,21 +7251,21 @@ function openApiKeySettings() {
         <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">⚠️ Data Management</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button onclick="
-            const today = new Date().toISOString().slice(0,10);
+            const todayKey = challengeDateKey(new Date());
             const d = challengeLoad();
-            if (d[today]) {
-              delete d[today].trashTalkBeforeDone;
-              delete d[today].trashTalkRevealDone;
-              delete d[today].trashTalkResultsDone;
+            if (d[todayKey]) {
+              delete d[todayKey].trashTalkBeforeDone;
+              delete d[todayKey].trashTalkRevealDone;
+              delete d[todayKey].trashTalkResultsDone;
               challengeSave(d);
               alert('Trash talk flags reset — re-open the challenge to trigger it.');
             } else { alert('No data for today yet.'); }
           " style="padding:8px 12px;background:transparent;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;">RESET TRASH TALK</button>
           <button onclick="
-            const today = new Date().toISOString().slice(0,10);
             if (confirm('Reset ALL of today\'s picks and data?')) {
               const d = challengeLoad();
-              delete d[today];
+              const todayKey = challengeDateKey(new Date());
+              delete d[todayKey];
               challengeSave(d);
               document.getElementById('apiKeySettingsOverlay').remove();
               renderChallengeScoreboard('today');
@@ -7213,7 +7274,7 @@ function openApiKeySettings() {
           " style="padding:8px 12px;background:transparent;border:1px solid #e63946;border-radius:6px;color:#e63946;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;">RESET TODAY</button>
           <button onclick="
             if (confirm('Clear ALL challenge history? This cannot be undone.')) {
-              localStorage.removeItem('hrintel_challenge_v1');
+              localStorage.removeItem(CHALLENGE_KEY);
               document.getElementById('apiKeySettingsOverlay').remove();
               renderChallengeScoreboard('today');
               renderChallengeToday();
