@@ -6466,170 +6466,215 @@ function challengePicksLocked() {
 
 // ── Generate Claude's picks — full lineup pool with all available signals ──
 function generateClaudePicks() {
+  // ── Claude's independent probability formula ─────────────────────────────
+  // Claude scores every confirmed lineup player using raw signals.
+  // Threat badges are ONE input — not the starting point.
+  // The formula mirrors the HR Probability Score on game cards.
+  //
+  // MAX possible score: ~22 pts
+  // Weights are calibrated so no single signal dominates.
+
   const alerts          = window._lastAlerts      || [];
   const matchups        = _matchupsData           || [];
   const pitcherMatchups = _pitcherMatchupsData    || [];
 
-  const scoreMap = {};
+  // ── LOOKUP TABLES ─────────────────────────────────────────────────────────
 
-  const addScore = (playerId, playerName, team, pitcher, gamePk, points, signal) => {
-    if (!playerId) return;
-    if (!scoreMap[playerId]) {
-      scoreMap[playerId] = { playerId, playerName, team, pitcher, gamePk, score: 0, signals: [] };
-    }
-    scoreMap[playerId].score += points;
-    if (!scoreMap[playerId].signals.includes(signal)) scoreMap[playerId].signals.push(signal);
-    if (playerName) scoreMap[playerId].playerName = playerName;
-    if (pitcher && pitcher !== 'TBD') scoreMap[playerId].pitcher = pitcher;
-    if (gamePk) scoreMap[playerId].gamePk = gamePk;
-  };
+  // Hitter season HR rank: id -> { rank, hr }
+  const hitterStatMap = {};
+  hitters.forEach((h, i) => { hitterStatMap[h.id] = { rank: i + 1, hr: h.hr }; });
 
-  // ── PRE-BUILD LOOKUP STRUCTURES ──────────────────────────────────────
+  // HR-prone pitcher: pitcherId -> { rank, hr }
+  const hrPitcherMap = {};
+  hrPitchers.forEach((p, i) => { hrPitcherMap[p.id] = { rank: i + 1, hr: p.hr }; });
 
-  // Top-25 HR hitter lookup: playerId -> rank (1-based)
-  const hitterRankMap = {};
-  hitters.forEach((h, i) => { hitterRankMap[h.id] = i + 1; });
+  // Venue HR rank: venueId -> { rank, hr, name }
+  const venueRankMap = {};
+  venues.forEach((v, i) => { venueRankMap[v.venueId] = { rank: i + 1, hr: v.hr, name: v.name }; });
 
-  // HR-prone pitcher lookup: pitcherId -> rank
-  const hrPitcherRankMap = {};
-  hrPitchers.forEach((p, i) => { hrPitcherRankMap[p.id] = i + 1; });
-
-  // Top-10 HR venue ids
-  const top10MinHR = venues.length >= 10 ? venues[9].hr : 0;
-  const top10VenueIds = new Set(venues.filter(v => v.hr >= top10MinHR).map(v => v.venueId));
-
-  // Alert lookups: hitterId_gamePk -> type
-  const alertMap = {};
+  // Alert map: playerId -> alert (triple/double)
+  const alertByPlayer = {};
   for (const a of alerts) {
-    if (!a.hitter?.id) continue;
-    const key = `${a.hitter.id}_${a.game?.gamePk||''}`;
-    alertMap[key] = { type: a.type, pitcherName: a.pitcher?.name, gamePk: a.game?.gamePk };
+    if (a.hitter?.id) alertByPlayer[`${a.hitter.id}_${a.game?.gamePk||''}`] = a;
   }
 
-  // Hot H2H lookup: hitterId -> matchup
-  const h2hMap = {};
+  // H2H map: hitterId -> best matchup data
+  const h2hByPlayer = {};
   for (const m of matchups) {
-    if (m.ops >= 0.850 || m.avg >= 0.400 || m.hr >= 3) {
-      h2hMap[m.hitterId] = m;
+    if (!h2hByPlayer[m.hitterId] || m.ops > h2hByPlayer[m.hitterId].ops) {
+      h2hByPlayer[m.hitterId] = m;
     }
   }
 
-  // Pitcher struggles vs team: opposingTeam -> true
-  const pitcherStrugglesTeams = new Set(
-    pitcherMatchups.filter(pm => pm.ops >= 0.850).map(pm => pm.opposingTeam)
-  );
+  // Pitcher struggles vs team: pitcherName|pitcherId -> { ops, team }
+  const pitcherStruggles = {};
+  for (const pm of pitcherMatchups) {
+    if (pm.ops >= 0.750) pitcherStruggles[pm.pitcherId || pm.pitcherName] = pm;
+  }
 
-  // ── SEED: EVERY confirmed lineup player across all today's games ──────
-  // This is the full player pool — not just top-25 HR hitters
+  // ── SCORE EVERY LINEUP PLAYER ─────────────────────────────────────────────
+  const pool = []; // { playerId, playerName, team, pitcher, pitcherId, gamePk, venueId, score, factors }
+
   for (const game of todayGames) {
-    for (const side of ['away', 'home']) {
-      const battingTeam   = game[side];
-      const fieldingSide  = side === 'away' ? 'home' : 'away';
-      const fieldingTeam  = game[fieldingSide];
-      const pitcherName   = fieldingTeam.pitcherName || 'TBD';
-      const pitcherId     = fieldingTeam.pitcherId;
-      const lineup        = battingTeam.lineup || [];
+    const venueData = venueRankMap[game.venueId] || null;
 
-      // Fall back to top-25 hitters on this team if no confirmed lineup yet
+    for (const side of ['away', 'home']) {
+      const batting    = game[side];
+      const fielding   = game[side === 'away' ? 'home' : 'away'];
+      const pitcherId  = fielding.pitcherId;
+      const pitcherName = fielding.pitcherName || 'TBD';
+      const lineup     = batting.lineup || [];
+
       const players = lineup.length > 0
-        ? lineup.map(p => ({ id: p.id, name: p.name, team: battingTeam.team }))
-        : hitters.filter(h => h.team === battingTeam.team).map(h => ({ id: h.id, name: h.name, team: h.team }));
+        ? lineup.map(p => ({ id: p.id, name: p.name }))
+        : hitters.filter(h => h.team === batting.team).map(h => ({ id: h.id, name: h.name }));
 
       for (const player of players) {
         if (!player.id || !player.name) continue;
 
-        // Seed every player into the pool with 0 base score
-        addScore(player.id, player.name, battingTeam.team, pitcherName, game.gamePk, 0, '⚾ In Lineup');
+        let score   = 0;
+        const factors = []; // { label, pts, detail }
 
-        // ── SIGNAL 1: Triple Threat (+5) ──
+        const add = (pts, label, detail = '') => {
+          score += pts;
+          factors.push({ label, pts, detail });
+        };
+
+        // ── A: Threat System (derived from composite analysis already done) ──
+        // Triple Threat = hitter rank + pitcher HR rank + venue all align → high confidence
+        // Double Threat = 2 of 3 align → moderate confidence
         const alertKey = `${player.id}_${game.gamePk||''}`;
-        const alert = alertMap[alertKey] || Object.values(alertMap).find(a =>
-          alerts.find(al => al.hitter?.id === player.id && al.game?.gamePk === game.gamePk)
-        );
-        const alertDirect = alerts.find(al => al.hitter?.id === player.id && al.game?.gamePk === game.gamePk);
-        if (alertDirect?.type === 'triple') {
-          addScore(player.id, null, null, null, null, 5, '⚡ Triple Threat');
-        }
-        // ── SIGNAL 2: Double Threat (+3) ──
-        else if (alertDirect?.type === 'double') {
-          addScore(player.id, null, null, null, null, 3, '🔶 Double Threat');
+        const playerAlert = alertByPlayer[alertKey];
+        if (playerAlert?.type === 'triple') {
+          add(5, '⚡ Triple Threat', 'Top HR hitter vs HR-prone pitcher at HR venue');
+        } else if (playerAlert?.type === 'double') {
+          add(3, '🔶 Double Threat', '2 of 3 HR factors aligned');
         }
 
-        // ── SIGNAL 3: Top-25 HR hitter rank bonus ──
-        const rank = hitterRankMap[player.id];
-        if (rank) {
-          const pts = rank <= 5 ? 3 : rank <= 10 ? 2 : 1;
-          addScore(player.id, null, null, null, null, pts, `📊 #${rank} HR Hitter`);
+        // ── B: Season HR Power (independent of threat system) ──
+        // Measures raw HR production — best predictor of future HRs
+        const hStat = hitterStatMap[player.id];
+        if (hStat) {
+          if (hStat.rank <= 3)       add(4, `📊 Elite Power (#${hStat.rank})`, `${hStat.hr} HR this season`);
+          else if (hStat.rank <= 8)  add(3, `📊 Top-8 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
+          else if (hStat.rank <= 15) add(2, `📊 Top-15 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
+          else if (hStat.rank <= 25) add(1, `📊 Top-25 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
         }
 
-        // ── SIGNAL 4: Facing top-25 HR-allowed pitcher (+2) ──
-        if (pitcherId && hrPitcherRankMap[pitcherId] && hrPitcherRankMap[pitcherId] <= 25) {
-          addScore(player.id, null, null, null, null, 2, `🎯 Pitcher #${hrPitcherRankMap[pitcherId]} HR-Allowed`);
+        // ── C: Pitcher Vulnerability ──
+        // How many HRs has today's pitcher surrendered this season?
+        const pitcherStat = pitcherId ? hrPitcherMap[pitcherId] : null;
+        if (pitcherStat) {
+          if (pitcherStat.rank <= 5)       add(4, `🎯 Pitcher Leaks HRs (#${pitcherStat.rank})`, `${pitcherStat.hr} HR allowed this season`);
+          else if (pitcherStat.rank <= 10) add(3, `🎯 Pitcher Vulnerable (#${pitcherStat.rank})`, `${pitcherStat.hr} HR allowed`);
+          else if (pitcherStat.rank <= 25) add(2, `🎯 Pitcher HR Risk (#${pitcherStat.rank})`, `${pitcherStat.hr} HR allowed`);
         }
 
-        // ── SIGNAL 5: Top-10 HR venue (+2) ──
-        if (top10VenueIds.has(game.venueId)) {
-          addScore(player.id, null, null, null, null, 2, '🏟️ Top HR Venue');
+        // ── D: Venue Factor ──
+        // Park plays a massive role in HR probability
+        if (venueData) {
+          if (venueData.rank <= 3)       add(3, `🏟️ Elite HR Park (#${venueData.rank})`, `${venueData.hr} HRs hit here this season`);
+          else if (venueData.rank <= 8)  add(2, `🏟️ HR-Friendly Park (#${venueData.rank})`, `${venueData.hr} HRs this season`);
+          else if (venueData.rank <= 15) add(1, `🏟️ Moderate HR Park (#${venueData.rank})`, `${venueData.hr} HRs this season`);
         }
 
-        // ── SIGNAL 6: Hot H2H vs today's pitcher (+3) ──
-        if (h2hMap[player.id]) {
-          addScore(player.id, null, null, null, null, 3, '🔥 Hot H2H');
+        // ── E: Career H2H vs Today's Pitcher ──
+        // Historical matchup data — most direct signal available
+        const h2h = h2hByPlayer[player.id];
+        if (h2h && h2h.ab >= 5) {
+          if (h2h.hr >= 3)            add(4, '🔥 Owns This Pitcher', `${h2h.hr} HR in ${h2h.ab} AB career vs ${pitcherName}`);
+          else if (h2h.ops >= 0.950)  add(3, '🔥 Elite H2H', `${h2h.avg?.toFixed(3)||'---'} AVG, ${h2h.ops?.toFixed(3)||'---'} OPS vs ${pitcherName}`);
+          else if (h2h.ops >= 0.800)  add(2, '🔥 Hot H2H', `${h2h.avg?.toFixed(3)||'---'} AVG, ${h2h.ops?.toFixed(3)||'---'} OPS vs ${pitcherName}`);
+          else if (h2h.ops >= 0.650)  add(1, '🔥 Decent H2H', `${h2h.ops?.toFixed(3)||'---'} OPS vs ${pitcherName}`);
         }
 
-        // ── SIGNAL 7: Pitcher struggles vs this team (+2) ──
-        if (pitcherStrugglesTeams.has(battingTeam.team)) {
-          addScore(player.id, null, null, null, null, 2, '📉 Pitcher Struggles vs Team');
+        // ── F: Pitcher Struggles vs This Team ──
+        // Pitcher's OPS-against record specifically vs this batting team
+        const strugKey = pitcherId || pitcherName;
+        const strug = pitcherStruggles[strugKey];
+        if (strug && strug.team === batting.team) {
+          if (strug.ops >= 0.950)     add(3, '📉 Pitcher Struggles vs Team', `${strug.ops.toFixed(3)} OPS against ${batting.team}`);
+          else if (strug.ops >= 0.800) add(2, '📉 Pitcher Soft vs Team', `${strug.ops.toFixed(3)} OPS against ${batting.team}`);
         }
 
-        // ── SIGNAL 8: Handedness advantage (+1) ──
-        // R batter vs LHP, or L batter vs RHP = favorable
+        // ── G: Handedness Advantage ──
+        // Opposite-hand matchups historically favor the hitter
         const batterHand  = batHandCache[player.id];
         const pitcherHand = pitcherId ? handednessCache[pitcherId] : null;
         if (batterHand && pitcherHand) {
-          const advantage = (batterHand === 'R' && pitcherHand === 'L') ||
-                            (batterHand === 'L' && pitcherHand === 'R');
-          if (advantage) addScore(player.id, null, null, null, null, 1, '✋ Handedness Edge');
+          const platoon = (batterHand === 'R' && pitcherHand === 'L') ||
+                          (batterHand === 'L' && pitcherHand === 'R');
+          if (platoon) add(1, '✋ Platoon Advantage', `${batterHand} batter vs ${pitcherHand}HP`);
+        }
+
+        // Only include players with meaningful signals (score > 0, at least 2 factors)
+        if (score > 0 && factors.length >= 1) {
+          pool.push({
+            playerId:   player.id,
+            playerName: player.name,
+            team:       batting.team,
+            pitcher:    pitcherName,
+            pitcherId,
+            gamePk:     game.gamePk,
+            venueId:    game.venueId,
+            venueName:  venueData?.name || game.venue,
+            venueRank:  venueData?.rank || null,
+            score,
+            factors,
+          });
         }
       }
     }
   }
 
-  // ── FILTER: Only keep players with at least 1 meaningful signal (score > 0) ──
-  const allEntries = Object.values(scoreMap).filter(e =>
-    e.playerName && e.score > 0 && !e.signals.every(s => s === '⚾ In Lineup')
-  );
+  // ── SORT: Score desc, then genuine random within same-score tiers ──────────
+  pool.sort((a, b) => b.score !== a.score ? b.score - a.score : Math.random() - 0.5);
 
-  // ── SORT: By score desc, then weighted random within same-score tiers ──
-  // True randomness within tiers so picks vary day to day
-  allEntries.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return Math.random() - 0.5; // genuine random tiebreak
+  const top3 = pool.slice(0, 3);
+
+  return top3.map(e => {
+    // Build a structured scouting summary for the reveal explanation
+    const topFactors = e.factors.slice(0, 3).map(f => f.label).join(' · ');
+    const scoutLines = e.factors.map(f => `${f.label}${f.detail ? ': ' + f.detail : ''}`);
+
+    return {
+      playerId:    e.playerId,
+      playerName:  e.playerName,
+      team:        e.team,
+      pitcher:     e.pitcher,
+      pitcherId:   e.pitcherId,
+      gamePk:      e.gamePk,
+      venueName:   e.venueName || '—',
+      venueRank:   e.venueRank,
+      score:       e.score,
+      factors:     e.factors,       // full factor array for scouting report
+      scoutLines,                   // pre-formatted for API prompt
+      reason:      e.factors[0]?.label || '📊 Analysis',
+      reasonType:  e.factors.some(f=>f.label.includes('Triple')) ? 'triple'
+                 : e.factors.some(f=>f.label.includes('Double')) ? 'double' : 'hot',
+      signals:     e.factors.map(f => f.label),
+      result:      'pending',
+      hrCount:     0,
+      explanation: '', // filled in on reveal via API
+    };
   });
-
-  const top3 = allEntries.slice(0, 3);
-
-  return top3.map(e => ({
-    playerId:   e.playerId,
-    playerName: e.playerName,
-    team:       e.team || '—',
-    pitcher:    e.pitcher || 'TBD',
-    reason:     e.signals.find(s => s !== '⚾ In Lineup') || '📊 Analysis',
-    reasonType: e.signals.includes('⚡ Triple Threat') ? 'triple'
-              : e.signals.includes('🔶 Double Threat') ? 'double' : 'hot',
-    signals:    e.signals.filter(s => s !== '⚾ In Lineup'),
-    score:      e.score,
-    result:     'pending',
-    hrCount:    0,
-    gamePk:     e.gamePk || null,
-  }));
 }
+
 
 // ── Save today's entry ──
 function challengeInitToday() {
   const data  = challengeLoad();
   const today = challengeDateKey(new Date());
-  if (data[today]) return; // already initialized
+  // Force regen if picks were made with old formula (missing factors array)
+  if (data[today]) {
+    const existing = data[today].claudePicks || [];
+    const needsRegen = existing.length > 0 && !existing[0].factors;
+    if (!needsRegen) return; // already initialized with new formula
+    // Keep user picks and other data, just regenerate Claude's picks
+    data[today].claudePicks = generateClaudePicks();
+    challengeSave(data);
+    return;
+  }
 
   const claudePicks = generateClaudePicks();
   data[today] = {
@@ -6694,14 +6739,22 @@ async function challengeCheckResults(dateKey) {
     // Calculate daily scores
     day.claudeScore = (day.claudePicks||[]).filter(p => p.result === 'hit').length;
     day.userScore   = (day.userPicks||[]).filter(p => p.result === 'hit').length;
+    challengeSave(data); // save before winner calc
     const cp = (day.claudePicks||[]).filter(p => p.result !== 'pending').length;
     const up = (day.userPicks||[]).filter(p => p.result !== 'pending').length;
-    if (cp > 0 || up > 0) {
+    const totalC = (day.claudePicks||[]).length;
+    const totalU = (day.userPicks||[]).length;
+    // Only declare winner when ALL picks on BOTH sides are resolved
+    if (cp === totalC && up === totalU && totalC > 0 && totalU > 0) {
       if (day.claudeScore > day.userScore)      day.winner = 'claude';
       else if (day.userScore > day.claudeScore) day.winner = 'user';
       else                                      day.winner = 'tie';
     }
     challengeSave(data);
+    // Re-render so results section and trash talk DOM elements appear
+    if (typeof renderChallengeToday === 'function') {
+      setTimeout(() => renderChallengeToday(), 100);
+    }
   }
 }
 
@@ -6826,21 +6879,36 @@ function renderChallengeToday() {
       </div>`;
     }
   } else {
-    // Revealed
-    for (const p of claudePicks) {
+    // Revealed — show full scouting cards
+    for (let pi = 0; pi < claudePicks.length; pi++) {
+      const p = claudePicks[pi];
       const cls = p.reasonType === 'triple' ? 'triple' : p.reasonType === 'double' ? 'double' : 'hot';
       const badgeColor = p.reasonType === 'triple' ? 'var(--accent-gold)' : p.reasonType === 'double' ? 'var(--accent-orange)' : '#4ade80';
       const resultCls  = p.result === 'hit' ? 'hit' : p.result === 'miss' ? 'miss' : 'pending';
       const resultIcon = p.result === 'hit' ? '✓' : p.result === 'miss' ? '✗' : '□';
       const scoreTag   = p.score ? ` · <span style="color:var(--text-dim);">${p.score}pts</span>` : '';
+
+      // Factor breakdown pills
+      const factorHtml = (p.factors||[]).map(f =>
+        `<span style="display:inline-block;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:9px;color:var(--text-dim);margin:2px 2px 0 0;">${f.label}${f.pts > 0 ? ' +'+f.pts : ''}</span>`
+      ).join('');
+
+      // Scouting explanation — use stored explanation or placeholder
+      const explanationId = `scout-${p.playerId}-${pi}`;
+      const existingExpl  = p.explanation || '';
+      const explanationHtml = existingExpl
+        ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-mid);line-height:1.7;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;">"${existingExpl}"</div>`
+        : `<div id="${explanationId}" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;">🤖 Loading scouting report...</div>`;
+
       html += `<div class="challenge-pick-card ${cls}">
-        <div class="challenge-pick-body">
+        <div class="challenge-pick-body" style="width:100%;">
           <div class="challenge-pick-badge" style="color:${badgeColor};">${p.reason}${scoreTag}</div>
           <div class="challenge-pick-name">${p.playerName}</div>
-          <div class="challenge-pick-sub">vs ${p.pitcher} · ${p.team}</div>
-          ${p.signals?.length > 1 ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:3px;">${p.signals.slice(1).join(' · ')}</div>` : ''}
+          <div class="challenge-pick-sub">vs ${p.pitcher} · ${p.team}${p.venueName ? ' · ' + p.venueName : ''}</div>
+          <div style="margin-top:5px;">${factorHtml}</div>
+          ${explanationHtml}
         </div>
-        <div class="challenge-pick-result">
+        <div class="challenge-pick-result" style="align-self:flex-start;">
           <div class="challenge-result-box ${resultCls}">${resultIcon}</div>
           ${p.result==='hit'&&p.hrCount>1?`<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#4ade80;">${p.hrCount} HR</div>`:''}
         </div>
@@ -6922,6 +6990,10 @@ function renderChallengeToday() {
   // Moment 2 — Reveal (only fire once when picks just hit 3)
   if (document.getElementById('trashTalkReveal') && !day2?.trashTalkRevealDone) {
     renderTrashTalk('reveal', day, 'trashTalkReveal', today);
+  }
+  // Generate scouting explanations for Claude's picks on reveal
+  if (claudeRevealed && claudePicks.length > 0 && claudePicks.some(p => !p.explanation)) {
+    generateScoutingExplanations(claudePicks, today);
   }
   // Moment 3 — Results (only fire once when all resolved)
   if (document.getElementById('trashTalkResults') && !day2?.trashTalkResultsDone) {
@@ -7332,6 +7404,52 @@ async function generateTrashTalk(moment, context) {
     const data = await response.json();
     return data.content?.[0]?.text?.trim() || null;
   } catch { return null; }
+}
+
+// ── Generate per-pick scouting explanations via API ─────────────────────────
+async function generateScoutingExplanations(picks, dateKey) {
+  if (!getApiKey()) return;
+  const data = challengeLoad();
+  const day  = data[dateKey];
+  if (!day) return;
+
+  let changed = false;
+
+  for (let i = 0; i < picks.length; i++) {
+    const p = picks[i];
+    if (p.explanation) continue; // already generated
+
+    const factorSummary = (p.factors||p.signals||[])
+      .map(f => typeof f === 'object' ? `${f.label}${f.detail ? ' ('+f.detail+')' : ''}` : f)
+      .join(', ');
+
+    const prompt = `You are a sharp MLB analyst. Give a 2-sentence scouting report explaining why ${p.playerName} (${p.team}) is a strong HR pick today vs ${p.pitcher}. Use these data signals: ${factorSummary}. Be specific, confident, and analytical — like a real scout. No fluff. No quotation marks. Max 2 sentences.`;
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 120, messages: [{ role: 'user', content: prompt }] })
+      });
+      const d = await resp.json();
+      const text = d.content?.[0]?.text?.trim();
+      if (text) {
+        // Save explanation back to localStorage
+        const reloaded = challengeLoad();
+        if (reloaded[dateKey]?.claudePicks?.[i]) {
+          reloaded[dateKey].claudePicks[i].explanation = text;
+          challengeSave(reloaded);
+          changed = true;
+        }
+        // Update DOM immediately without full re-render
+        const el = document.getElementById(`scout-${p.playerId}-${i}`);
+        if (el) {
+          el.style.color = 'var(--text-mid)';
+          el.innerHTML = `"${text}"`;
+        }
+      }
+    } catch (e) { console.warn('scouting explanation failed', e); }
+  }
 }
 
 async function renderTrashTalk(moment, day, containerId, dateKey) {
