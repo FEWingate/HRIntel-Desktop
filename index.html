@@ -6917,8 +6917,8 @@ function renderChallengeToday() {
     const hasGameData = typeof todayGames !== 'undefined' && todayGames.length > 0;
     html += `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:12px 0;line-height:1.8;">
       ${hasGameData
-        ? '🔄 Claude is analyzing today's lineup data...'
-        : '⏳ Waiting for today's schedule and lineup data to load.'}
+        ? '🔄 Claude is analyzing today\'s lineup data...'
+        : '⏳ Waiting for today\'s schedule and lineup data to load.'}
       <br><span onclick="challengeInitToday(); renderChallengeToday();" style="color:#60a5fa;cursor:pointer;text-decoration:underline;">Click to retry</span>
     </div>`;
   } else if (!claudeRevealed) {
