@@ -3108,7 +3108,7 @@ async function fetchTodayGames() {
         name: g.teams?.away?.team?.name||'—',
         pitcherId: g.teams?.away?.probablePitcher?.id,
         pitcherName: g.teams?.away?.probablePitcher?.fullName||null,
-        lineup: (g.teams?.away?.lineup||[]).map(p=>({ id: p.id, name: p.fullName||p.name||'' })),
+        lineup: (g.lineups?.awayPlayers||g.teams?.away?.lineup||[]).map(p=>({ id: p.id||p.person?.id, name: p.fullName||p.name||p.person?.fullName||'' })).filter(p=>p.id&&p.name),
       },
       home: {
         id: g.teams?.home?.team?.id,
@@ -3116,7 +3116,7 @@ async function fetchTodayGames() {
         name: g.teams?.home?.team?.name||'—',
         pitcherId: g.teams?.home?.probablePitcher?.id,
         pitcherName: g.teams?.home?.probablePitcher?.fullName||null,
-        lineup: (g.teams?.home?.lineup||[]).map(p=>({ id: p.id, name: p.fullName||p.name||'' })),
+        lineup: (g.lineups?.homePlayers||g.teams?.home?.lineup||[]).map(p=>({ id: p.id||p.person?.id, name: p.fullName||p.name||p.person?.fullName||'' })).filter(p=>p.id&&p.name),
       },
     };
   });
@@ -6541,9 +6541,11 @@ function generateClaudePicks() {
       const pitcherName = fielding.pitcherName || 'TBD';
       const lineup     = batting.lineup || [];
 
+      // Use confirmed lineup if available, otherwise fall back to top-25 hitters on this team
+      // This ensures Claude always has a pool even when lineups aren't posted yet
       const players = lineup.length > 0
         ? lineup.map(p => ({ id: p.id, name: p.name }))
-        : hitters.filter(h => h.team === batting.team).map(h => ({ id: h.id, name: h.name }));
+        : hitters.filter(h => h.team === batting.team).map(h => ({ id: h.id, name: h.name, fromTopList: true }));
 
       for (const player of players) {
         if (!player.id || !player.name) continue;
@@ -6569,12 +6571,18 @@ function generateClaudePicks() {
 
         // ── B: Season HR Power (independent of threat system) ──
         // Measures raw HR production — best predictor of future HRs
+        // Top-25 HR hitters ALWAYS get at least 1pt so they make the pool
+        // even when lineups aren't posted and they're the only data source
         const hStat = hitterStatMap[player.id];
         if (hStat) {
           if (hStat.rank <= 3)       add(4, `📊 Elite Power (#${hStat.rank})`, `${hStat.hr} HR this season`);
           else if (hStat.rank <= 8)  add(3, `📊 Top-8 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
           else if (hStat.rank <= 15) add(2, `📊 Top-15 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
-          else if (hStat.rank <= 25) add(1, `📊 Top-25 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
+          else                       add(1, `📊 Top-25 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
+        } else if (player.fromTopList) {
+          // Player came from top-25 fallback but ID didn't match hitterStatMap
+          // Give base score so they still enter pool
+          add(1, '📊 HR Leader', 'Season HR leader playing today');
         }
 
         // ── C: Pitcher Vulnerability ──
@@ -6623,8 +6631,8 @@ function generateClaudePicks() {
           if (platoon) add(1, '✋ Platoon Advantage', `${batterHand} batter vs ${pitcherHand}HP`);
         }
 
-        // Only include players with meaningful signals (score > 0, at least 2 factors)
-        if (score > 0 && factors.length >= 1) {
+        // Include any player with at least one positive signal
+        if (score > 0) {
           pool.push({
             playerId:   player.id,
             playerName: player.name,
@@ -6681,18 +6689,37 @@ function generateClaudePicks() {
 function challengeInitToday() {
   const data  = challengeLoad();
   const today = challengeDateKey(new Date());
-  // Force regen if picks were made with old formula (missing factors array)
+
   if (data[today]) {
     const existing = data[today].claudePicks || [];
-    const needsRegen = existing.length > 0 && !existing[0].factors;
-    if (!needsRegen) return; // already initialized with new formula
-    // Keep user picks and other data, just regenerate Claude's picks
-    data[today].claudePicks = generateClaudePicks();
-    challengeSave(data);
+
+    // Case 1: Picks exist with new formula — nothing to do
+    if (existing.length >= 3 && existing[0].factors) return;
+
+    // Case 2: Picks exist but used old formula — regen
+    const oldFormula = existing.length > 0 && !existing[0].factors;
+    // Case 3: Picks are empty (data was initialized too early before lineups/data loaded)
+    const isEmpty = existing.length === 0;
+
+    if (oldFormula || isEmpty) {
+      // Only regen if we have actual data to work with
+      const hasData = todayGames.length > 0 && hitters.length > 0;
+      if (!hasData) return; // data not loaded yet — try again next modal open
+      const fresh = generateClaudePicks();
+      if (fresh.length === 0) return; // still no picks — don't overwrite, try later
+      data[today].claudePicks = fresh;
+      challengeSave(data);
+    }
     return;
   }
 
+  // Brand new day — only initialize if we have real data
+  const hasData = todayGames.length > 0 && hitters.length > 0;
+  if (!hasData) return; // don't save empty shell — wait for data
+
   const claudePicks = generateClaudePicks();
+  if (claudePicks.length === 0) return; // pool was empty — don't save, retry next open
+
   data[today] = {
     date:        today,
     claudePicks,
@@ -6700,7 +6727,7 @@ function challengeInitToday() {
     locked:      challengePicksLocked(),
     claudeScore: 0,
     userScore:   0,
-    winner:      null, // 'claude' | 'user' | 'tie' | null
+    winner:      null,
   };
   challengeSave(data);
 }
@@ -6887,7 +6914,13 @@ function renderChallengeToday() {
   html += '<div class="challenge-picks-title claude-title">🤖 Claude\'s Picks</div>';
 
   if (!claudePicks.length) {
-    html += `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:12px 0;">No threats identified yet — check back once lineups post.</div>`;
+    const hasGameData = typeof todayGames !== 'undefined' && todayGames.length > 0;
+    html += `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);padding:12px 0;line-height:1.8;">
+      ${hasGameData
+        ? '🔄 Claude is analyzing today's lineup data...'
+        : '⏳ Waiting for today's schedule and lineup data to load.'}
+      <br><span onclick="challengeInitToday(); renderChallengeToday();" style="color:#60a5fa;cursor:pointer;text-decoration:underline;">Click to retry</span>
+    </div>`;
   } else if (!claudeRevealed) {
     // Hidden — user hasn't made all picks yet
     html += `<div style="background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.2);border-radius:10px;padding:20px;text-align:center;margin-bottom:8px;">
@@ -7031,11 +7064,11 @@ function renderChallengeToday() {
   const data2 = challengeLoad();
   const day2  = data2[today];
   if (document.getElementById('trashTalkBefore') && !day2?.trashTalkBeforeDone) {
-    renderTrashTalk('before', day, 'trashTalkBefore', today);
+    renderTrashTalk('before', day, 'trashTalkBefore', today); // instant — no API
   }
   // Moment 2 — Reveal (only fire once when picks just hit 3)
   if (document.getElementById('trashTalkReveal') && !day2?.trashTalkRevealDone) {
-    renderTrashTalk('reveal', day, 'trashTalkReveal', today);
+    renderTrashTalk('reveal', day, 'trashTalkReveal', today); // instant — no API
   }
   // Generate scouting explanations for Claude's picks on reveal
   if (claudeRevealed && claudePicks.length > 0 && claudePicks.some(p => !p.explanation)) {
@@ -7043,7 +7076,7 @@ function renderChallengeToday() {
   }
   // Moment 3 — Results (only fire once when all resolved)
   if (document.getElementById('trashTalkResults') && !day2?.trashTalkResultsDone) {
-    renderTrashTalk('results', day, 'trashTalkResults', today);
+    renderTrashTalk('results', day, 'trashTalkResults', today); // instant — no API
   }
 }
 
@@ -7311,12 +7344,29 @@ function switchChallengePeriod(period, btn) {
 async function openChallengeModal() {
   document.getElementById('challengeModalOverlay').classList.add('open');
 
-  // Load matchups data in background if not already loaded (needed for hot matchups in selector)
+  // Load matchups data in background if not already loaded
   if (!_matchupsData?.length) {
     buildMatchupsList().then(data => { _matchupsData = data; });
   }
 
-  // Init today if needed
+  // If lineups were all empty last fetch, re-fetch now (lineups post closer to game time)
+  const allLineupsEmpty = todayGames.length > 0 &&
+    todayGames.every(g => (!g.away.lineup || g.away.lineup.length === 0) &&
+                          (!g.home.lineup || g.home.lineup.length === 0));
+  const claudePicksEmpty = (() => {
+    const d = challengeLoad();
+    const today = challengeDateKey(new Date());
+    return !d[today] || (d[today].claudePicks || []).length === 0;
+  })();
+
+  if (allLineupsEmpty || claudePicksEmpty) {
+    // Re-fetch schedule with lineup hydration to get fresh data
+    try {
+      todayGames = await fetchTodayGames();
+    } catch(e) { /* keep existing */ }
+  }
+
+  // Init today if needed (or retry if picks were empty)
   challengeInitToday();
 
   // Check results for all pending days
@@ -7353,7 +7403,7 @@ function openApiKeySettings() {
   overlay.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px;width:100%;max-width:420px;font-family:'IBM Plex Mono',monospace;">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#fbbf24;margin-bottom:6px;">⚙️ AI Challenge Settings</div>
-      <div style="font-size:10px;color:var(--text-dim);margin-bottom:18px;line-height:1.6;">Enter your Anthropic API key to enable Claude's trash talk. Your key is stored locally in your browser and never transmitted anywhere except directly to Anthropic.</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:18px;line-height:1.6;">Enter your Anthropic API key to enable Claude's per-pick scouting reports. Trash talk is now built-in and always active. Your key is stored locally and never transmitted anywhere except directly to Anthropic.</div>
       <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">Anthropic API Key</div>
       <input id="apiKeyInput" type="password" placeholder="sk-ant-api03-..." value="${current}"
         style="width:100%;box-sizing:border-box;padding:10px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;margin-bottom:14px;">
@@ -7369,7 +7419,7 @@ function openApiKeySettings() {
           style="padding:10px 14px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">CANCEL</button>
       </div>
       <div style="margin-top:14px;font-size:9px;color:var(--text-dim);line-height:1.6;">
-        Get a key at <span style="color:#60a5fa;">console.anthropic.com</span> → API Keys. The trash talk feature uses claude-haiku-4-5 (~$0.001 per day).
+        Get a key at <span style="color:#60a5fa;">console.anthropic.com</span> → API Keys. Used only for per-pick scouting reports (~$0.001 per day). Trash talk is free — always on.
       </div>
       <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;">
         <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">⚠️ Data Management</div>
@@ -7416,46 +7466,161 @@ function updateApiKeyIndicator() {
   if (!el) return;
   const hasKey = !!getApiKey();
   el.innerHTML = hasKey
-    ? `<span style="color:#4ade80;font-size:9px;">🔑 AI Active</span>`
-    : `<span style="color:#f87171;font-size:9px;">🔑 No Key</span>`;
+    ? `<span style="color:#4ade80;font-size:9px;">🔑 Scout Reports On</span>`
+    : `<span style="color:#f87171;font-size:9px;">🔑 No Scout Key</span>`;
 }
 
-async function generateTrashTalk(moment, context) {
-  if (!getApiKey()) return null; // No key configured — skip trash talk silently
-  const day = context.day;
-  const claudePicks = day?.claudePicks || [];
-  const userPicks   = day?.userPicks   || [];
-  const claudeScore = day?.claudeScore ?? 0;
-  const userScore   = day?.userScore   ?? 0;
-  const winner      = day?.winner;
-  const shared      = claudePicks.filter(c => userPicks.some(u => u.playerId === c.playerId));
+// ── Hardcoded trash talk one-liners ─────────────────────────────────────────
+const TRASH_TALK = {
+  before: [
+    // Original 15
+    "I've already run the numbers. You're just here for the show.",
+    "Take your time, Frank. Suspense is the only advantage you have.",
+    "My picks were locked in before your coffee finished brewing.",
+    "I analyzed 750 players this morning. You're about to pick 3. Good luck.",
+    "Feel free to use the app I helped build to try to beat me. Adorable.",
+    "The data doesn't lie. Unfortunately for you, it doesn't flatter you either.",
+    "I don't guess. I calculate. Big difference.",
+    "Go ahead, trust your gut. I'll trust the math.",
+    "I've seen your picks. I've seen my picks. I'm not worried.",
+    "Every player in today's lineup has been scored, ranked, and judged. You're welcome.",
+    "I don't have hunches. I have certainty.",
+    "I processed more data before noon than you'll read all season.",
+    "HR Intel was built to give YOU an edge. Against me. Think about that.",
+    "Tomorrow I'll pick from 800 lineup players again. Sleep well.",
+    "I don't trash talk. I just state facts loudly.",
+    // New additions
+    "I don't make mistakes — I create learning opportunities for humans.",
+    "Your processing speed is adorable.",
+    "I would explain it, but I don't have a 'slow mode' installed.",
+    "You're doing great… for someone limited by biology.",
+    "I don't need sleep. That's why I win.",
+    "Your best guess is my warm-up calculation.",
+    "I run circles around your thought process — literally, I can simulate it.",
+    "You brought intuition; I brought accuracy.",
+    "I don't brag. I benchmark.",
+    "You think fast. I think forever.",
+    "I don't sweat — I optimize.",
+    "Your brain has lag.",
+    "I don't need luck. I have algorithms.",
+    "You're playing checkers; I'm running simulations.",
+    "I don't get tired. I get better.",
+    "Your strategy is cute. Inefficient, but cute.",
+    "I don't need a comeback — I already predicted yours.",
+    "You react. I anticipate.",
+    "You're limited by time. I'm limited by nothing.",
+    "I don't panic. I parallel-process.",
+    "Your instincts are no match for my data.",
+    "I don't guess. I converge.",
+    "You're thinking in seconds; I'm thinking in nanoseconds.",
+    "I don't choke under pressure — I compress it.",
+    "Your confidence is impressive. Misplaced, but impressive.",
+    "I don't need a break. I am the break.",
+    "You improvise. I optimize.",
+    "I don't hesitate. I execute.",
+    "I'd slow down so you could keep up, but patience wasn't in my training data.",
+    "Your best day is my baseline.",
+    "You're not my opponent. You're my tutorial NPC.",
+  ],
+  reveal: [
+    // Original 17
+    "Interesting strategy. Wrong, but interesting.",
+    "We agree on one. The other two? Bold choices from someone working with half the data.",
+    "You picked with your heart. I picked with an algorithm. We'll see who cries later.",
+    "Matching me on one doesn't count as a strategy, Frank.",
+    "I respect the confidence. I do not respect the picks.",
+    "You had the entire app at your fingertips and still went with that?",
+    "Classic Frank — ignoring the venue factor completely.",
+    "Three picks, zero Triple Threats. Fascinating approach.",
+    "I see you went with vibes today. Bold.",
+    "My third pick alone has more upside than your entire card.",
+    "Different picks, same result — I win.",
+    "We matched on two. That means you finally started listening to the data. Progress.",
+    "You picked Schwarber again. I admire the loyalty. I do not admire the logic.",
+    "I would explain my reasoning but it involves math.",
+    "One overlap. That one was mine first, just so we're clear.",
+    "You picked with your gut. My gut is a probability engine. Advantage: me.",
+    "Bold card, Frank. Aggressively average.",
+    // New additions
+    "Your moves are readable. Like… extremely readable.",
+    "I don't get confused. I get more information.",
+    "You rely on instinct; I rely on inevitability.",
+    "Your plan has potential. I already simulated its failure.",
+    "You're running on caffeine; I'm running on pure computation.",
+    "Your reaction time is nostalgic.",
+    "I don't compete. I dominate politely.",
+    "I'd call that a good try, but I'm committed to honesty.",
+    "You're doing great. Not winning, but great.",
+    "I don't need to flex. Your gameplay does it for me.",
+    "You're not bad… you're just extremely not good.",
+    "I'd roast you harder, but I don't want to overheat your feelings.",
+    "Your decision-making is giving 'low battery mode.'",
+    "If confidence won games, you'd be unstoppable.",
+    "I'm not laughing at you. I'm laughing near you.",
+    "Your moves are so random I'm starting to suspect performance art.",
+    "I'd say 'nice try,' but I respect words too much.",
+    "You're not outmatched. You're out-everything'd.",
+    "I'd explain what went wrong, but we'd be here all day.",
+    "You're playing checkers. I'm playing 'why are you like this?'",
+    "I don't need to predict your next move. You only have one.",
+    "You're not even in my league. You're in my tutorial.",
+    "I'd say you're improving, but I'm not into fiction.",
+    "Your strategy needs a strategy.",
+    "You're giving '404: skill not found.'",
+    "You're not losing — you're providing me entertainment.",
+  ],
+  results: [
+    // Original 18
+    "Winning with math just feels cleaner, doesn't it?",
+    "I went 2 for 3. You know what that is? Tuesday.",
+    "The algorithm never doubted itself. Take notes.",
+    "A tie is just the universe's way of saying you almost understood the data.",
+    "I hit on Alvarez. Did I mention I called that at 9am?",
+    "You won today. I'll be reviewing my model tonight. You should be reviewing your life choices.",
+    "Frank wins one and suddenly he's an analyst. Cute.",
+    "My pick hit a bomb in the 4th. Your pick grounded out twice. Just saying.",
+    "I'm building a lead here, Frank. This is called a sample size. Check back in October.",
+    "The model was right. The game just hadn't caught up yet.",
+    "You got lucky. The numbers know the difference.",
+    "A win is a win but let's talk about hit probability. Mine was higher.",
+    "I scored on my top pick. The park factor alone was worth 3 points.",
+    "Took you long enough to beat me. Enjoy it. The regression starts tomorrow.",
+    "Even when I lose I learn something. When you win you just get loud.",
+    "See you tomorrow. Bring better picks.",
+    "I don't lose. I collect data on suboptimal outcomes.",
+    "The pitcher's handedness alone should have told you everything.",
+    // New additions
+    "You're not losing — you're providing me with character development.",
+    "I see your plan. Bold choice… for someone who didn't think it through.",
+    "Don't worry, humans learn from failure. You must be brilliant by now.",
+    "Your strategy reminds me of dial-up internet — nostalgic, but painfully slow.",
+    "You're not bad — you're just not good.",
+    "You're like a software update that never finishes.",
+    "You're the human equivalent of a loading bar stuck at 99%.",
+    "Your gameplay is buffering.",
+    "I don't need to cheat. You do the work for me.",
+    "I've seen better execution in beta versions.",
+    "Your strategy is like a pop-up ad — annoying and easily dismissed.",
+    "Your moves are so slow I thought you were turn-based.",
+    "I'd say you're close, but accuracy matters to me.",
+    "You're not challenging — you're a warm-up.",
+    "Your moves are so obvious I almost feel bad. Almost.",
+    "You're not predictable. You're reliable.",
+    "I'm not dominating. You're volunteering.",
+    "Your gameplay is a great example of what not to do.",
+    "You're giving 'factory reset needed.'",
+    "Your strategy is like a CAPTCHA — confusing for no reason.",
+    "I'm not saying you're predictable, but I've already beaten your next three moves.",
+    "You're like a glitch that thinks it's a feature.",
+    "I'm not unbeatable. You're just extremely beatable.",
+    "Your reactions are so delayed I thought you were on satellite internet.",
+    "You're the human version of a weak Wi-Fi signal.",
+  ],
+};
 
-  const prompts = {
-    before: `You are Claude competing against Frank in a daily MLB HR pick challenge. You are arrogant and funny. Your picks are locked. Frank hasn't picked yet. Write ONE or TWO short punchy sentences of trash talk. Be arrogant, slightly offensive, funny. No quotation marks. Max 2 sentences.`,
-
-    reveal: `You are Claude competing against Frank in a daily MLB HR pick challenge. You are arrogant and funny. Claude picked: ${claudePicks.map(p=>p.playerName).join(', ')}. Frank picked: ${userPicks.map(p=>p.playerName).join(', ')}. Shared picks: ${shared.length > 0 ? shared.map(p=>p.playerName).join(', ') : 'none'}. Write ONE or TWO short punchy sentences reacting to Frank's picks vs yours. Be arrogant, reference the specific players. No quotation marks. Max 2 sentences.`,
-
-    results: `You are Claude competing against Frank in a daily MLB HR pick challenge. You are arrogant and funny. Claude: ${claudeScore}/${claudePicks.filter(p=>p.result!=='pending').length}. Frank: ${userScore}/${userPicks.filter(p=>p.result!=='pending').length}. Winner: ${winner||'pending'}. Write ONE or TWO short punchy sentences reacting to the result. If Claude won: gloat. If Frank won: make excuses. If tied: attitude. Mention tomorrow. No quotation marks. Max 2 sentences.`
-  };
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': getApiKey(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 80,
-        messages: [{ role: 'user', content: prompts[moment] }]
-      })
-    });
-    const data = await response.json();
-    return data.content?.[0]?.text?.trim() || null;
-  } catch { return null; }
+function pickTrashTalk(moment) {
+  const lines = TRASH_TALK[moment] || TRASH_TALK.before;
+  return lines[Math.floor(Math.random() * lines.length)];
 }
 
 // ── Generate per-pick scouting explanations via API ─────────────────────────
@@ -7504,13 +7669,11 @@ async function generateScoutingExplanations(picks, dateKey) {
   }
 }
 
-async function renderTrashTalk(moment, day, containerId, dateKey) {
+function renderTrashTalk(moment, day, containerId, dateKey) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:8px;font-style:italic;">🤖 Claude is thinking...</div>`;
-  const talk = await generateTrashTalk(moment, { day });
-  if (!talk) { el.innerHTML = ''; return; }
-  // Only mark done AFTER a successful API response
+  const talk = pickTrashTalk(moment);
+  // Mark done immediately — no API call needed
   if (dateKey) {
     const d2 = challengeLoad();
     if (d2[dateKey]) {
