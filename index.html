@@ -7485,17 +7485,7 @@ function openChallengeSettings() {
             alert('Trash talk flags reset \u2014 re-open the challenge to trigger it.');
           } else { alert('No data for today yet.'); }
         " style="padding:8px 12px;background:transparent;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;">RESET TRASH TALK</button>
-        <button onclick="
-          if (confirm('Reset ALL of today\'s picks and data?')) {
-            const d = challengeLoad();
-            const todayKey = challengeDateKey(new Date());
-            delete d[todayKey];
-            challengeSave(d);
-            document.getElementById('apiKeySettingsOverlay').remove();
-            renderChallengeScoreboard('today');
-            renderChallengeToday();
-          }
-        " style="padding:8px 12px;background:transparent;border:1px solid #e63946;border-radius:6px;color:#e63946;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;">RESET TODAY</button>
+        <button onclick="challengeResetToday()" style="padding:8px 12px;background:transparent;border:1px solid #e63946;border-radius:6px;color:#e63946;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;">RESET TODAY</button>
         <button onclick="
           if (confirm('Clear ALL challenge history? This cannot be undone.')) {
             localStorage.removeItem(CHALLENGE_KEY);
@@ -7513,6 +7503,17 @@ function openChallengeSettings() {
 }
 
 function updateApiKeyIndicator() {} // no-op — removed with API settings
+
+function challengeResetToday() {
+  const overlay = document.getElementById('apiKeySettingsOverlay');
+  if (overlay) overlay.remove();
+  const d = challengeLoad();
+  const todayKey = challengeDateKey(new Date());
+  delete d[todayKey];
+  challengeSave(d);
+  renderChallengeScoreboard('today');
+  renderChallengeToday();
+}
 
 // ── Hardcoded trash talk one-liners ─────────────────────────────────────────
 const TRASH_TALK = {
