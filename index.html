@@ -6281,7 +6281,8 @@ async function buildMatchupsList() {
   ]);
 
   // Fetch full roster for each team playing today
-  const teamRosters = {};
+  window._teamRosters = {}; // expose globally for Claude's pick formula
+  const teamRosters = window._teamRosters;
   await Promise.all([...teamsPlayingToday].map(async teamAbbr => {
     const opp = teamOpposingPitcher[teamAbbr];
     if (!opp?.id) return; // no confirmed pitcher, skip
@@ -6446,6 +6447,17 @@ async function openMatchupsModal() {
   document.getElementById('coldMatchupsContainer').innerHTML = '<div class="matchup-loading">This may take 15-30 seconds...</div>';
   _matchupsData = await buildMatchupsList();
   renderMatchupsUI();
+  // Rosters now populated — regen Claude's picks if they were made before rosters loaded
+  const _cd = challengeLoad();
+  const _todayKey = challengeDateKey(new Date());
+  if (_cd[_todayKey]?._needsRosterRegen) {
+    const _fresh = generateClaudePicks();
+    if (_fresh.length > 0) {
+      _cd[_todayKey].claudePicks = _fresh;
+      delete _cd[_todayKey]._needsRosterRegen;
+      challengeSave(_cd);
+    }
+  }
 }
 
 function closeMatchupsModal(e) {
@@ -6545,11 +6557,14 @@ function generateClaudePicks() {
       const pitcherName = fielding.pitcherName || 'TBD';
       const lineup     = batting.lineup || [];
 
-      // Use confirmed lineup if available, otherwise fall back to top-25 hitters on this team
-      // This ensures Claude always has a pool even when lineups aren't posted yet
+      // Priority: confirmed lineup > full team roster > top-25 hitters on team
+      // Full roster gives Claude the widest possible pool even before lineups post
+      const fullRoster = (window._teamRosters || {})[batting.team] || [];
       const players = lineup.length > 0
         ? lineup.map(p => ({ id: p.id, name: p.name }))
-        : hitters.filter(h => h.team === batting.team).map(h => ({ id: h.id, name: h.name, fromTopList: true }));
+        : fullRoster.length > 0
+          ? fullRoster.map(p => ({ id: p.id, name: p.name }))
+          : hitters.filter(h => h.team === batting.team).map(h => ({ id: h.id, name: h.name, fromTopList: true }));
 
       for (const player of players) {
         if (!player.id || !player.name) continue;
@@ -6703,8 +6718,13 @@ function challengeInitToday() {
     // Otherwise regen: old formula, empty, or fewer than 3 picks
     const hasData = todayGames.length > 0 && hitters.length > 0;
     if (!hasData) return; // data not loaded yet — try again next modal open
+    // Wait for team rosters to be populated for a wider pool
+    const hasRosters = Object.keys(window._teamRosters || {}).length > 0;
     const fresh = generateClaudePicks();
     if (fresh.length === 0) return; // pool still empty — try later
+    // If we got picks but no rosters yet, mark as needing regen once rosters load
+    if (!hasRosters) data[today]._needsRosterRegen = true;
+    else delete data[today]._needsRosterRegen;
     data[today].claudePicks = fresh;
     challengeSave(data);
     return;
@@ -7161,6 +7181,29 @@ function buildChallengeSelector(day) {
   }
   if (leaderItems.length) sections.push({ title: '📊 Top HR Hitters — Playing Today', color: '#60a5fa', items: leaderItems });
 
+  // Section 4 — ALL roster players playing today (for search)
+  // These only appear in search results, not in the default scroll list
+  const rosterItems = [];
+  const seenRosterKeys = new Set([...seenLeaderKeys]);
+  const rosters = window._teamRosters || {};
+  for (const game of todayGames) {
+    for (const side of ['away', 'home']) {
+      const batting  = game[side];
+      const fielding = game[side === 'away' ? 'home' : 'away'];
+      const pitcher  = fielding.pitcherName || 'TBD';
+      const roster   = rosters[batting.team] || [];
+      for (const p of roster) {
+        const compositeKey = `${p.id}_${game.gamePk}`;
+        if (seenRosterKeys.has(compositeKey)) continue;
+        seenRosterKeys.add(compositeKey);
+        const pick = { playerId: p.id, playerName: p.name, team: batting.team, pitcher, reason: '⚾ Roster', reasonType: 'hot', gamePk: game.gamePk };
+        rosterItems.push({ pick, badge: batting.team, badgeColor: '#94a3b8', sub: `vs ${pitcher} · ${game.away.team} @ ${game.home.team}`, searchOnly: true });
+      }
+    }
+  }
+  // Don't push roster as a visible section — only add to allItems for search
+  const rosterSection = { title: '⚾ All Players — Search Only', color: '#94a3b8', items: rosterItems, searchOnly: true };
+
   // Build HTML
   let html = `<div class="challenge-selector" id="challengeSelectorPanel">
     <!-- Search bar -->
@@ -7174,6 +7217,7 @@ function buildChallengeSelector(day) {
   // All items flat list (for search)
   const allItems = [];
 
+  // Render visible sections
   for (const section of sections) {
     html += `<div class="challenge-selector-section" data-section="${section.title}">
       <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:${section.color};padding:6px 4px 4px;text-transform:uppercase;">${section.title}</div>`;
@@ -7187,6 +7231,18 @@ function buildChallengeSelector(day) {
     }
     html += '</div>';
   }
+
+  // Add roster players to allItems for search — rendered hidden, shown on search match
+  html += `<div id="challengeRosterSection" style="display:none;">`;
+  for (const item of rosterSection.items) {
+    const { pick, badge, badgeColor, sub } = item;
+    const compositeKey = `${pick.playerId}_${pick.gamePk||'null'}`;
+    const disabled = alreadyPicked.has(compositeKey);
+    const isClaude = claudePicked.has(compositeKey);
+    allItems.push({ pick, badge, badgeColor, sub, disabled, isClaude });
+    html += buildSelectorItem(pick, badge, badgeColor, sub, disabled, isClaude);
+  }
+  html += '</div>';
 
   html += '</div></div>';
 
@@ -7229,15 +7285,21 @@ function filterChallengeSelector(query) {
   const list = document.getElementById('challengeSelectorList');
   if (!list) return;
 
+  const rosterSection = document.getElementById('challengeRosterSection');
+
   if (!q) {
-    // Show all — restore sections
+    // No query — show default sections, hide roster section
     list.querySelectorAll('.challenge-selector-item, .challenge-selector-section, .challenge-selector-disabled').forEach(el => el.style.display = '');
     list.querySelectorAll('.challenge-selector-section > div:first-child').forEach(el => el.style.display = '');
+    if (rosterSection) rosterSection.style.display = 'none';
     return;
   }
 
-  // Hide section headers, show only matching items
+  // Has query — show roster section, hide visible section headers
+  if (rosterSection) rosterSection.style.display = '';
   list.querySelectorAll('.challenge-selector-section > div:first-child').forEach(el => el.style.display = 'none');
+
+  // Show only items matching name or team
   list.querySelectorAll('.challenge-selector-item, .challenge-selector-disabled').forEach(el => {
     const name = el.dataset.name || '';
     const team = el.dataset.team || '';
@@ -7397,6 +7459,19 @@ function openChallengeSettings() {
   overlay.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px;width:100%;max-width:380px;font-family:'IBM Plex Mono',monospace;">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:#fbbf24;margin-bottom:16px;">⚙️ AI Challenge Settings</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">🔑 Anthropic API Key (Scouting Reports)</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <input id="scoutKeyInput" type="password" placeholder="sk-ant-api03-..." value="${localStorage.getItem('hrintel_anthropic_key')||''}"
+          style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;">
+        <button onclick="
+          const k=document.getElementById('scoutKeyInput').value.trim();
+          if(k&&k.startsWith('sk-ant')){localStorage.setItem('hrintel_anthropic_key',k);this.textContent='✓ Saved';setTimeout(()=>this.textContent='SAVE',1500);}
+          else{document.getElementById('scoutKeyInput').style.borderColor='#e63946';}
+        " style="padding:8px 12px;background:linear-gradient(135deg,#fbbf24,#ef4444);border:none;border-radius:6px;color:#000;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;cursor:pointer;">SAVE</button>
+        <button onclick="localStorage.removeItem('hrintel_anthropic_key');document.getElementById('scoutKeyInput').value='';"
+          style="padding:8px 12px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;">CLEAR</button>
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:16px;line-height:1.6;">Used only for per-pick scouting reports. Trash talk is always on — no key needed.</div>
       <div style="font-size:10px;color:var(--text-dim);margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;">⚠️ Data Management</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
         <button onclick="
