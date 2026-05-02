@@ -6588,32 +6588,13 @@ function generateClaudePicks() {
           factors.push({ label, pts, detail });
         };
 
-        // ── A: Threat System (derived from composite analysis already done) ──
-        // Triple Threat = hitter rank + pitcher HR rank + venue all align → high confidence
-        // Double Threat = 2 of 3 align → moderate confidence
-        const alertKey = `${player.id}_${game.gamePk||''}`;
-        const playerAlert = alertByPlayer[alertKey];
-        if (playerAlert?.type === 'triple') {
-          add(5, '⚡ Triple Threat', 'Top HR hitter vs HR-prone pitcher at HR venue');
-        } else if (playerAlert?.type === 'double') {
-          add(3, '🔶 Double Threat', '2 of 3 HR factors aligned');
-        }
+        // ── Signal A (REMOVED): Threat System excluded intentionally ──
+        // Claude does NOT use Threat badges — forces him to find value
+        // outside the curated intel Frank sees, creating genuine competition.
 
-        // ── B: Season HR Power (independent of threat system) ──
-        // Measures raw HR production — best predictor of future HRs
-        // Top-25 HR hitters ALWAYS get at least 1pt so they make the pool
-        // even when lineups aren't posted and they're the only data source
-        const hStat = hitterStatMap[player.id];
-        if (hStat) {
-          if (hStat.rank <= 3)       add(4, `📊 Elite Power (#${hStat.rank})`, `${hStat.hr} HR this season`);
-          else if (hStat.rank <= 8)  add(3, `📊 Top-8 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
-          else if (hStat.rank <= 15) add(2, `📊 Top-15 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
-          else                       add(1, `📊 Top-25 HR Hitter (#${hStat.rank})`, `${hStat.hr} HR this season`);
-        } else if (player.fromTopList) {
-          // Player came from top-25 fallback but ID didn't match hitterStatMap
-          // Give base score so they still enter pool
-          add(1, '📊 HR Leader', 'Season HR leader playing today');
-        }
+        // ── Signal B (REMOVED): Season HR rank excluded intentionally ──
+        // Removing HR rank prevents Claude from defaulting to the same
+        // leaderboard players Frank sees in the Top 25 section.
 
         // ── C: Pitcher Vulnerability ──
         // How many HRs has today's pitcher surrendered this season?
