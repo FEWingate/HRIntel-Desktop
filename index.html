@@ -6471,12 +6471,10 @@ function challengeDateKey(d) {
   return `${y}-${m}-${day}`;
 }
 
-// ── Check if picks are locked (after noon) ──
+// ── Check if picks are locked ──
+// Cutoff temporarily disabled while testing — picks never lock
 function challengePicksLocked() {
-  const now = new Date();
-  // Lock at 1:00pm sharp — no minutes grace period. NO CHEATING.
-  return now.getHours() > CHALLENGE_CUTOFF_HOUR ||
-         (now.getHours() === CHALLENGE_CUTOFF_HOUR && now.getMinutes() >= 0);
+  return false; // TODO: re-enable after Claude pick generation is stable
 }
 
 // ── Generate Claude's picks — full lineup pool with all available signals ──
@@ -6535,13 +6533,8 @@ function generateClaudePicks() {
   cutoffToday.setHours(CHALLENGE_CUTOFF_HOUR, 0, 0, 0);
 
   for (const game of todayGames) {
-    // Skip games that start at or after the 1pm cutoff
-    // This prevents Claude from picking Gm 2 of doubleheaders or late games
-    // that Frank cannot pick (since his selector also respects the cutoff)
-    if (game.gameDate) {
-      const gameStart = new Date(game.gameDate);
-      if (gameStart >= cutoffToday) continue; // NO CHEATING
-    }
+    // Game time filter temporarily disabled while testing pick generation
+    // TODO: re-enable cutoff filter once picks are stable
 
     const venueData = venueRankMap[game.venueId] || null;
 
@@ -6704,23 +6697,16 @@ function challengeInitToday() {
   if (data[today]) {
     const existing = data[today].claudePicks || [];
 
-    // Case 1: Picks exist with new formula — nothing to do
-    if (existing.length >= 3 && existing[0].factors) return;
+    // Case 1: Picks exist with new formula and we have 3 — nothing to do
+    if (existing.length >= 3 && existing[0]?.factors) return;
 
-    // Case 2: Picks exist but used old formula — regen
-    const oldFormula = existing.length > 0 && !existing[0].factors;
-    // Case 3: Picks are empty (data was initialized too early before lineups/data loaded)
-    const isEmpty = existing.length === 0;
-
-    if (oldFormula || isEmpty) {
-      // Only regen if we have actual data to work with
-      const hasData = todayGames.length > 0 && hitters.length > 0;
-      if (!hasData) return; // data not loaded yet — try again next modal open
-      const fresh = generateClaudePicks();
-      if (fresh.length === 0) return; // still no picks — don't overwrite, try later
-      data[today].claudePicks = fresh;
-      challengeSave(data);
-    }
+    // Otherwise regen: old formula, empty, or fewer than 3 picks
+    const hasData = todayGames.length > 0 && hitters.length > 0;
+    if (!hasData) return; // data not loaded yet — try again next modal open
+    const fresh = generateClaudePicks();
+    if (fresh.length === 0) return; // pool still empty — try later
+    data[today].claudePicks = fresh;
+    challengeSave(data);
     return;
   }
 
@@ -6915,7 +6901,7 @@ function renderChallengeToday() {
     const timeLeft = minsLeft >= 60 ? `${Math.floor(minsLeft/60)}h ${minsLeft%60}m` : `${minsLeft}m`;
     html += `<div class="challenge-cutoff">⏰ Picks lock at 1pm · ${timeLeft} remaining</div>`;
   } else {
-    html += `<div class="challenge-cutoff" style="border-color:rgba(230,57,70,0.2);background:rgba(230,57,70,0.05);color:#e63946;">🔒 Picks locked — 1pm cutoff passed. No cheating.</div>`;
+    // Cutoff temporarily disabled — no locked banner
   }
 
   html += '<div class="challenge-picks-grid">';
@@ -7107,11 +7093,9 @@ function buildChallengeSelector(day) {
   const cutoffTs = new Date();
   cutoffTs.setHours(CHALLENGE_CUTOFF_HOUR, 0, 0, 0);
   function getPlayerGamesToday(teamAbbr) {
-    return todayGames.filter(g => {
-      if (g.away.team !== teamAbbr && g.home.team !== teamAbbr) return false;
-      if (g.gameDate && new Date(g.gameDate) >= cutoffTs) return false; // post-cutoff game
-      return true;
-    });
+    return todayGames.filter(g =>
+      g.away.team === teamAbbr || g.home.team === teamAbbr
+    );
   }
   // Helper — 'Gm 1' / 'Gm 2' label, empty string if only one game
   function gmLabel(games, index) {
