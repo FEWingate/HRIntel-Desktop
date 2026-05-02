@@ -6447,15 +6447,26 @@ async function openMatchupsModal() {
   document.getElementById('coldMatchupsContainer').innerHTML = '<div class="matchup-loading">This may take 15-30 seconds...</div>';
   _matchupsData = await buildMatchupsList();
   renderMatchupsUI();
-  // Rosters now populated — regen Claude's picks if they were made before rosters loaded
+  // Rosters now populated — always regenerate Claude's picks with full pool
   const _cd = challengeLoad();
   const _todayKey = challengeDateKey(new Date());
-  if (_cd[_todayKey]?._needsRosterRegen) {
-    const _fresh = generateClaudePicks();
-    if (_fresh.length > 0) {
-      _cd[_todayKey].claudePicks = _fresh;
-      delete _cd[_todayKey]._needsRosterRegen;
-      challengeSave(_cd);
+  if (_cd[_todayKey]) {
+    const _existing = _cd[_todayKey].claudePicks || [];
+    // Regen if: flagged for regen, fewer than 3 picks, or no factors (old formula)
+    const _needsRegen = _cd[_todayKey]._needsRosterRegen ||
+                        _existing.length < 3 ||
+                        (_existing.length > 0 && !_existing[0].factors);
+    if (_needsRegen) {
+      const _fresh = generateClaudePicks();
+      if (_fresh.length > 0) {
+        _cd[_todayKey].claudePicks = _fresh;
+        delete _cd[_todayKey]._needsRosterRegen;
+        challengeSave(_cd);
+        // Re-render if challenge modal is open
+        if (document.getElementById('challengeModalOverlay')?.classList.contains('open')) {
+          renderChallengeToday();
+        }
+      }
     }
   }
 }
@@ -6671,6 +6682,7 @@ function generateClaudePicks() {
   }
 
   // ── SORT: Score desc, then genuine random within same-score tiers ──────────
+  console.log(`[HR Intel] Claude pick pool: ${pool.length} players scored from ${todayGames.length} games, rosters: ${Object.keys(window._teamRosters||{}).length} teams`);
   pool.sort((a, b) => b.score !== a.score ? b.score - a.score : Math.random() - 0.5);
 
   const top3 = pool.slice(0, 3);
@@ -6911,18 +6923,7 @@ function renderChallengeToday() {
     html += `<div id="trashTalkBefore"></div>`;
   }
 
-  // Cutoff notice
-  if (!locked) {
-    const now = new Date();
-    const hoursLeft = CHALLENGE_CUTOFF_HOUR - now.getHours();
-    const nowM = new Date();
-    const cutoffMs = new Date(nowM.getFullYear(), nowM.getMonth(), nowM.getDate(), CHALLENGE_CUTOFF_HOUR, 0, 0) - nowM;
-    const minsLeft = Math.max(0, Math.floor(cutoffMs / 60000));
-    const timeLeft = minsLeft >= 60 ? `${Math.floor(minsLeft/60)}h ${minsLeft%60}m` : `${minsLeft}m`;
-    html += `<div class="challenge-cutoff">⏰ Picks lock at 1pm · ${timeLeft} remaining</div>`;
-  } else {
-    // Cutoff temporarily disabled — no locked banner
-  }
+  // Cutoff notice removed — deadline disabled while testing
 
   html += '<div class="challenge-picks-grid">';
 
@@ -7511,6 +7512,12 @@ function challengeResetToday() {
   const todayKey = challengeDateKey(new Date());
   delete d[todayKey];
   challengeSave(d);
+  // Wait for rosters to be available before generating fresh picks
+  // If rosters already loaded, generate now; otherwise let the regen trigger handle it
+  const hasRosters = Object.keys(window._teamRosters || {}).length > 0;
+  if (hasRosters && todayGames.length > 0 && hitters.length > 0) {
+    challengeInitToday();
+  }
   renderChallengeScoreboard('today');
   renderChallengeToday();
 }
