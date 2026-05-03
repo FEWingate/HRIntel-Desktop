@@ -19,8 +19,8 @@
     --accent-purple: #a78bfa;
     --accent-green: #4ade80;
     --text: #f0f0f0;
-    --text-dim: #4b5563;
-    --text-mid: #6b7280;
+    --text-dim: #a0aec0;
+    --text-mid: #cbd5e1;
     --triple-glow: 0 0 24px rgba(255,214,10,0.15), 0 0 48px rgba(230,57,70,0.08);
   }
 
@@ -3087,6 +3087,7 @@ async function fetchTodayGames() {
                            || abstractState === 'Final';
     const inningHalf     = ls.inningHalf||'';
     const inningOrd      = ls.currentInningOrdinal||'';
+    const outs           = ls.outs ?? null;
     // Try linescore first, fall back to teams score
     const awayRuns       = ls.teams?.away?.runs ?? g.teams?.away?.score ?? null;
     const homeRuns       = ls.teams?.home?.runs ?? g.teams?.home?.score ?? null;
@@ -3095,7 +3096,7 @@ async function fetchTodayGames() {
       time: formatTime(g.gameDate),
       gameDate: g.gameDate || null, // raw ISO string for cutoff comparison
       venue: g.venue?.name||'—', venueId: g.venue?.id,
-      isLive, isFinal, inningHalf, inningOrd,
+      isLive, isFinal, inningHalf, inningOrd, outs,
       awayRuns, homeRuns, detailedState,
       away: {
         id: g.teams?.away?.team?.id,
@@ -3576,6 +3577,7 @@ function liveScoreHTML(game) {
       <div class="score-middle">
         <span class="inning-badge live">${halfSymbol} ${game.inningOrd||''}</span>
         <span class="score-dash">LIVE</span>
+        ${game.outs !== null && game.outs !== undefined ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-left:4px;">${game.outs} out${game.outs !== 1 ? 's' : ''}</span>` : ''}
       </div>
       <div class="score-team" style="background:${homeTc}18;border-radius:6px;padding:4px 8px;">
         <span class="score-runs ${homeWin?'winning':''}">${game.homeRuns}</span>
@@ -3863,6 +3865,23 @@ async function initDashboard() {
   setProgress(88,'RENDERING LEADERBOARDS...');
 
   if (hitters.length)    renderHitters(alertHitterIds);
+  // Check challenge results on every data refresh (picks up Final games automatically)
+  const _challengeData = challengeLoad();
+  const _todayKey2 = challengeDateKey(new Date());
+  const _hasPending = Object.keys(_challengeData).some(k => {
+    const _day = _challengeData[k];
+    return [...(_day.claudePicks||[]), ...(_day.userPicks||[])].some(p => p.result === 'pending' && p.gamePk);
+  });
+  if (_hasPending) {
+    // Run in background — don't await so it doesn't block render
+    (async () => {
+      for (const dateKey of Object.keys(_challengeData).sort().reverse()) {
+        const _day = _challengeData[dateKey];
+        const _pending = [...(_day.claudePicks||[]), ...(_day.userPicks||[])].filter(p => p.result === 'pending' && p.gamePk);
+        if (_pending.length > 0) await challengeCheckResults(dateKey);
+      }
+    })();
+  }
   else document.getElementById('hitters-body').innerHTML = noDataMsg('Season stats loading');
 
   if (hrPitchers.length) renderPitcherTable('pitchers-body', hrPitchers, 'red', 'hr', alertPitcherIds);
@@ -6666,7 +6685,16 @@ function generateClaudePicks() {
   console.log(`[HR Intel] Claude pick pool: ${pool.length} players scored from ${todayGames.length} games, rosters: ${Object.keys(window._teamRosters||{}).length} teams`);
   pool.sort((a, b) => b.score !== a.score ? b.score - a.score : Math.random() - 0.5);
 
-  const top3 = pool.slice(0, 3);
+  // ── ENFORCE: Max 2 picks per team ────────────────────────────────────────
+  const teamPickCount = {};
+  const top3 = [];
+  for (const p of pool) {
+    if (top3.length >= 3) break;
+    const teamCount = teamPickCount[p.team] || 0;
+    if (teamCount >= 2) continue; // skip — already have 2 from this team
+    teamPickCount[p.team] = teamCount + 1;
+    top3.push(p);
+  }
 
   return top3.map(e => {
     // Build a structured scouting summary for the reveal explanation
