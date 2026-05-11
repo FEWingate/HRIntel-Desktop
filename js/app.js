@@ -415,6 +415,32 @@ async function fetchBatHand(playerId) {
   } catch { return null; }
 }
 
+const platoonSplitsCache = {};
+async function fetchPlatoonSplits(pitcherId) {
+  if (!pitcherId) return { vsL: null, vsR: null };
+  if (platoonSplitsCache[pitcherId]) return platoonSplitsCache[pitcherId];
+  try {
+    const url = `${BASE}/people/${pitcherId}/stats?stats=statSplits&group=pitching&season=${SEASON}&sitCodes=vl,vr&sportId=1`;
+    const sd = await fetchJSON(url);
+    const splits = sd.stats?.[0]?.splits || [];
+    let vsL = null, vsR = null;
+    for (const s of splits) {
+      const code = s.split?.code || s.split?.description || '';
+      if (code === 'vl' || code === 'vs Left' || /left/i.test(code))  vsL = s.stat?.homeRuns ?? null;
+      if (code === 'vr' || code === 'vs Right' || /right/i.test(code)) vsR = s.stat?.homeRuns ?? null;
+    }
+    if (vsL === null && vsR === null && splits.length >= 2) {
+      vsL = splits[0]?.stat?.homeRuns ?? null;
+      vsR = splits[1]?.stat?.homeRuns ?? null;
+    }
+    const result = { vsL, vsR };
+    platoonSplitsCache[pitcherId] = result;
+    return result;
+  } catch(e) {
+    return { vsL: null, vsR: null };
+  }
+}
+
 // ── TEAM LEAGUE CACHE ────────────────────────────────────────────────
 const teamLeagueCache = {}; // teamId (string) -> 'A' or 'N'
 const teamAbbrCache   = {}; // teamId (string) -> abbreviation
@@ -475,29 +501,7 @@ async function fetchHRPitchers() {
   const hands = await Promise.all(list.map(p=>fetchHandedness(p.id)));
   list.forEach((p,i)=>p.hand=hands[i]);
 
-  // Fetch platoon splits for all 25 pitchers in parallel
-  async function fetchPlatoonSplits(pitcherId) {
-    try {
-      const url = `${BASE}/people/${pitcherId}/stats?stats=statSplits&group=pitching&season=${SEASON}&sitCodes=vl,vr&sportId=1`;
-      const sd = await fetchJSON(url);
-      const splits = sd.stats?.[0]?.splits || [];
-      let vsL = null, vsR = null;
-      for (const s of splits) {
-        const code = s.split?.code || s.split?.description || '';
-        if (code === 'vl' || code === 'vs Left' || /left/i.test(code))  vsL = s.stat?.homeRuns ?? null;
-        if (code === 'vr' || code === 'vs Right' || /right/i.test(code)) vsR = s.stat?.homeRuns ?? null;
-      }
-      // fallback: if only 2 splits and codes didn't match, use order (vl first, vr second)
-      if (vsL === null && vsR === null && splits.length >= 2) {
-        vsL = splits[0]?.stat?.homeRuns ?? null;
-        vsR = splits[1]?.stat?.homeRuns ?? null;
-      }
-      return { vsL, vsR };
-    } catch(e) {
-      return { vsL: null, vsR: null };
-    }
-  }
-
+  // Fetch platoon splits for all 25 pitchers in parallel (uses global fetchPlatoonSplits)
   const platoons = await Promise.all(list.map(p => fetchPlatoonSplits(p.id)));
   list.forEach((p, i) => { p.vsL = platoons[i].vsL; p.vsR = platoons[i].vsR; });
 
@@ -1094,7 +1098,7 @@ function renderPitcherTable(tbodyId, list, color, valKey, alertIds) {
     return `<tr class="${isAlert?'hl-'+color:''} ${pulseClass}" ${(!isAlert&&!isToday)?rowStyle:''}>
       <td class="rank">${ranks[i]}</td>
       <td style="width:20px;padding-right:4px;">${hBadge}</td>
-      <td><div class="player-name" onclick="openPlayerModal(${p.id},'${safeName}','${p.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}${todayBadge}${crossBadge}</div></td>
+      <td><div class="player-name" onclick="openPlayerModal(${p.id},'${safeName}','${p.team}',${p.vsL??'null'},${p.vsR??'null'})" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}${todayBadge}${crossBadge}</div></td>
       <td class="stat-val ${color}">${p[valKey]}</td>
       ${vsLCell}${vsRCell}
       <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill ${color}" style="width:${Math.round(p[valKey]/max*100)}%"></div></div></td>
@@ -1872,7 +1876,7 @@ function closePlayerModal(e) {
   document.getElementById('playerModalOverlay').classList.remove('open');
 }
 
-async function openPlayerModal(playerId, name, teamAbbr) {
+async function openPlayerModal(playerId, name, teamAbbr, vsL, vsR) {
   if (!playerId) return;
   const tc = tickerTeamColor(teamAbbr||'');
 
@@ -1888,7 +1892,14 @@ async function openPlayerModal(playerId, name, teamAbbr) {
   document.getElementById('playerModalOverlay').classList.add('open');
 
   if (playerModalCache[playerId]) {
-    renderPlayerModal(playerModalCache[playerId], tc);
+    renderPlayerModal(playerModalCache[playerId], tc, vsL, vsR);
+    const pos = playerModalCache[playerId].bioData?.people?.[0]?.primaryPosition?.abbreviation;
+    const isPit = pos === 'P' || pos === 'SP' || pos === 'RP' || pos === 'CP';
+    if (isPit && vsL === undefined && vsR === undefined) {
+      fetchPlatoonSplits(playerId).then(({ vsL: fetchedL, vsR: fetchedR }) => {
+        renderPlayerModal(playerModalCache[playerId], tc, fetchedL, fetchedR);
+      });
+    }
     return;
   }
 
@@ -1904,14 +1915,23 @@ async function openPlayerModal(playerId, name, teamAbbr) {
     ]);
     const data = { bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit };
     playerModalCache[playerId] = data;
-    renderPlayerModal(data, tc);
+    renderPlayerModal(data, tc, vsL, vsR);
+    // If vsL/vsR weren't pre-loaded (pitcher clicked from outside Top 25 table),
+    // fetch splits now and re-render the season stats block if it's a pitcher.
+    const pos = data.bioData?.people?.[0]?.primaryPosition?.abbreviation;
+    const isPit = pos === 'P' || pos === 'SP' || pos === 'RP' || pos === 'CP';
+    if (isPit && vsL === undefined && vsR === undefined) {
+      fetchPlatoonSplits(playerId).then(({ vsL: fetchedL, vsR: fetchedR }) => {
+        renderPlayerModal(data, tc, fetchedL, fetchedR);
+      });
+    }
   } catch(e) {
     console.warn('Player modal fetch failed:', e);
     document.getElementById('playerModalMeta').textContent = 'Failed to load player data';
   }
 }
 
-function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit }, tc) {
+function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit }, tc, vsL, vsR) {
   const person = bioData?.people?.[0];
   if (!person) return;
 
@@ -1972,7 +1992,20 @@ function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit
   const seasonStats  = isPitcher ? seasonPit?.stats?.[0]?.splits  : seasonHit?.stats?.[0]?.splits;
   const careerStats  = isPitcher ? careerPit?.stats?.[0]?.splits  : careerHit?.stats?.[0]?.splits;
 
-  document.getElementById('playerSeasonStats').innerHTML = statGrid(seasonStats, !isPitcher);
+  let seasonHTML = statGrid(seasonStats, !isPitcher);
+  if (isPitcher && (vsL !== null && vsL !== undefined || vsR !== null && vsR !== undefined)) {
+    seasonHTML += `<div style="display:flex;gap:8px;margin-top:10px;">
+      <div style="flex:1;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:6px;padding:8px 0;text-align:center;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:4px;">HR VS L</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--accent-blue);">${vsL !== null && vsL !== undefined ? vsL : '—'}</div>
+      </div>
+      <div style="flex:1;background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.25);border-radius:6px;padding:8px 0;text-align:center;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:4px;">HR VS R</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--accent-red);">${vsR !== null && vsR !== undefined ? vsR : '—'}</div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('playerSeasonStats').innerHTML = seasonHTML;
   document.getElementById('playerCareerStats').innerHTML = statGrid(careerStats, !isPitcher);
 
   // Init game log
