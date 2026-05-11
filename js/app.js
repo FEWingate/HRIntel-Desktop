@@ -2623,14 +2623,15 @@ function updateSidebarThreats(alerts, noHRAlerts) {
   const doubles  = alerts.filter(a=>a.type==='double').length;
   const noHRTrip = (noHRAlerts||[]).filter(a=>a.type==='nohr-triple').length;
   const noHRDbl  = (noHRAlerts||[]).filter(a=>a.type==='nohr-double').length;
-  document.getElementById('sidebarTripleCount').textContent     = triples;
-  document.getElementById('sidebarDoubleCount').textContent     = doubles;
-  document.getElementById('sidebarNoHRTripleCount').textContent = noHRTrip;
-  document.getElementById('sidebarNoHRDoubleCount').textContent = noHRDbl;
+  const stc = document.getElementById('sidebarTripleCount');     if (stc) stc.textContent = triples;
+  const sdc = document.getElementById('sidebarDoubleCount');     if (sdc) sdc.textContent = doubles;
+  const sntc = document.getElementById('sidebarNoHRTripleCount'); if (sntc) sntc.textContent = noHRTrip;
+  const sndc = document.getElementById('sidebarNoHRDoubleCount'); if (sndc) sndc.textContent = noHRDbl;
 }
 
 function updateSidebarScoreRankings(gameScores) {
   const el = document.getElementById('sidebarScoreRankings');
+  if (!el) return;
   if (!gameScores || !gameScores.length) {
     el.innerHTML = `<div class="hr-feed-empty">No pregame scores yet</div>`; return;
   }
@@ -2762,6 +2763,7 @@ const MLB_TEAMS = [
 
 function buildRosterList() {
   const el = document.getElementById('sidebarRosters');
+  if (!el) return;
   el.innerHTML = MLB_TEAMS.map(team => {
     const tc = tickerTeamColor(team.abbr);
     return `<div class="team-roster-item" id="roster-btn-${team.id}" onclick="toggleRoster(${team.id},'${team.abbr}')">
