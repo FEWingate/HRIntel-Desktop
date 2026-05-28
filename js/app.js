@@ -134,6 +134,15 @@ async function buildHotColdData() {
     L5:  { hot: hotL5,  cold: coldL5  },
     L10: { hot: hotL10, cold: coldL10 },
   };
+
+  // Backfill L5/L10 HR counts onto hitters so Threat Alerts can display them
+  for (const h of hitters) {
+    const r = results[h.id];
+    if (r) { h.l5HR = r.l5HR; h.l10HR = r.l10HR; }
+  }
+  // Re-render alerts now that hitters have L5/L10 data
+  if (window._lastAlerts) renderAlerts(window._lastAlerts, true);
+
   renderHotCold();
 }
 
@@ -936,6 +945,9 @@ function renderAlerts(alerts, skipEnrich=false) {
     }
 
     const hitterTag  = a.hitter  ? `<span class="tag tag-hr">HR Rank #${a.hitter.rank} · ${a.hitter.hr} HR</span>` : '';
+    const recentHRTag = a.hitter && a.hitter.l5HR != null
+      ? `<span class="tag" style="background:rgba(251,191,36,0.1);color:#fbbf24;border:1px solid rgba(251,191,36,0.25);font-family:'IBM Plex Mono',monospace;letter-spacing:0.03em;">L5: ${a.hitter.l5HR} HR &nbsp;|&nbsp; L10: ${a.hitter.l10HR} HR</span>`
+      : '';
     const pitcherTag = a.hasPitcher && a.pitcher?.rank !== '—'
       ? `<span class="tag tag-pitcher">Pitcher Rank #${a.pitcher.rank} · ${a.pitcher.hr} HR allowed</span>`
       : a.earlyseason ? `<span class="tag tag-pitcher">Starting Pitcher · Early Season</span>` : '';
@@ -947,7 +959,7 @@ function renderAlerts(alerts, skipEnrich=false) {
       ${matchupLine}
       ${a.type==='triple'?`<div class="alert-venue">📍 <span ${clickVenue}>${a.game.venue}</span> — #${a.venueRank} HR Venue · ${a.venueData?.hr||''} HRs this season</div>`:''}
       <div class="alert-tags">
-        ${hitterTag}${pitcherTag}${venueTag}${tripleTag}
+        ${hitterTag}${recentHRTag}${pitcherTag}${venueTag}${tripleTag}
         <span class="tag tag-time">${a.game.time}</span>
       </div>
       ${a.h2h ? h2hStrip(a.h2h, a.pitcher?.name||'') : ''}
@@ -1543,7 +1555,8 @@ async function initDashboard() {
   setProgress(74,'FETCHING LOW HR TEAM DATA...');
   try { noHRTeams = await fetchNoHRTeams(); } catch(e) { noHRTeams=[]; }
 
-  setProgress(82,'ANALYZING MATCHUPS...');
+  setProgress(82,'ANALYZING MATCHUPS & RECENT HR TRENDS...');
+  if (hitters.length && !_hotColdData) buildHotColdData().catch(()=>{});
   const alerts = analyzeMatchups();
   const noHRAlerts = analyzeNoHRMatchups();
   const alertHitterIds  = new Set(alerts.map(a=>a.hitter?.id).filter(Boolean));
@@ -1554,8 +1567,6 @@ async function initDashboard() {
 
   if (hitters.length) {
     renderHitters(alertHitterIds);
-    // Build hot/cold data in background after hitters load
-    if (!_hotColdData) buildHotColdData().catch(()=>{});
   }
   else document.getElementById('hitters-body').innerHTML = noDataMsg('Season stats loading');
 
