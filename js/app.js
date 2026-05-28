@@ -946,7 +946,7 @@ function renderAlerts(alerts, skipEnrich=false) {
 
     const hitterTag  = a.hitter  ? `<span class="tag tag-hr">HR Rank #${a.hitter.rank} · ${a.hitter.hr} HR</span>` : '';
     const recentHRTag = a.hitter && a.hitter.l5HR != null
-      ? `<span class="tag" style="background:rgba(251,191,36,0.1);color:#fbbf24;border:1px solid rgba(251,191,36,0.25);font-family:'IBM Plex Mono',monospace;letter-spacing:0.03em;">L5: ${a.hitter.l5HR} HR &nbsp;|&nbsp; L10: ${a.hitter.l10HR} HR</span>`
+      ? `<span class="tag" style="background:rgba(96,165,250,0.1);color:var(--accent-blue);border:1px solid rgba(96,165,250,0.25);font-family:'IBM Plex Mono',monospace;letter-spacing:0.03em;">L5: ${a.hitter.l5HR} HR &nbsp;|&nbsp; L10: ${a.hitter.l10HR} HR</span>`
       : '';
     const pitcherTag = a.hasPitcher && a.pitcher?.rank !== '—'
       ? `<span class="tag tag-pitcher">Pitcher Rank #${a.pitcher.rank} · ${a.pitcher.hr} HR allowed</span>`
