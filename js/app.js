@@ -450,6 +450,31 @@ async function fetchPlatoonSplits(pitcherId) {
   }
 }
 
+// ── HITTER PLATOON SPLITS (HRs vs LHP / RHP) ─────────────────────────
+const hitterPlatoonCache = {};
+async function fetchHitterPlatoonSplits(hitterId) {
+  if (!hitterId) return { vsL: null, vsR: null };
+  if (hitterPlatoonCache[hitterId]) return hitterPlatoonCache[hitterId];
+  try {
+    const url = `${BASE}/people/${hitterId}/stats?stats=statSplits&group=hitting&season=${SEASON}&sitCodes=vl,vr&sportId=1`;
+    const sd = await fetchJSON(url);
+    const splits = sd.stats?.[0]?.splits || [];
+    let vsL = null, vsR = null;
+    for (const s of splits) {
+      const code = (s.split?.code || s.split?.description || '').toLowerCase();
+      if (code === 'vl' || code === 'vs left'  || /left/i.test(code))  vsL = s.stat?.homeRuns ?? null;
+      if (code === 'vr' || code === 'vs right' || /right/i.test(code)) vsR = s.stat?.homeRuns ?? null;
+    }
+    if (vsL === null && vsR === null && splits.length >= 2) {
+      vsL = splits[0]?.stat?.homeRuns ?? null;
+      vsR = splits[1]?.stat?.homeRuns ?? null;
+    }
+    const result = { vsL, vsR };
+    hitterPlatoonCache[hitterId] = result;
+    return result;
+  } catch { return { vsL: null, vsR: null }; }
+}
+
 // ── TEAM LEAGUE CACHE ────────────────────────────────────────────────
 const teamLeagueCache = {}; // teamId (string) -> 'A' or 'N'
 const teamAbbrCache   = {}; // teamId (string) -> abbreviation
@@ -486,10 +511,15 @@ async function fetchHitters() {
     teamId: s.team?.id,
     league: getLeague(s.team?.id),
     hr:     s.stat?.homeRuns||0,
-    hand:   null
+    hand:   null,
+    vsL:    null,
+    vsR:    null
   }));
   const hands = await Promise.all(list.map(p=>fetchBatHand(p.id)));
   list.forEach((p,i)=>p.hand=hands[i]);
+  // Fetch platoon splits for all 25 hitters in parallel
+  const platoons = await Promise.all(list.map(p => fetchHitterPlatoonSplits(p.id)));
+  list.forEach((p, i) => { p.vsL = platoons[i].vsL; p.vsR = platoons[i].vsR; });
   return list;
 }
 
@@ -684,11 +714,23 @@ async function fetchTeamHRLeaders(teamId) {
     const d = await fetchJSON(`${BASE}/stats?stats=season&group=hitting&season=${SEASON}&sortStat=homeRuns&order=desc&limit=3&sportId=1&teamId=${teamId}`);
     const splits = d.stats?.[0]?.splits||[];
     const list = splits.length
-      ? splits.map(s=>({ id:s.player?.id, name:s.player?.fullName||'—', hr:s.stat?.homeRuns||0 }))
+      ? splits.map(s=>({ id:s.player?.id, name:s.player?.fullName||'—', hr:s.stat?.homeRuns||0, vsL:null, vsR:null }))
       : (await fetchJSON(`${BASE}/stats?stats=season&group=hitting&season=${SEASON}&sortStat=homeRuns&order=desc&limit=3&sportId=1&teamId=${teamId}&gameType=R`))
-          .stats?.[0]?.splits?.map(s=>({ id:s.player?.id, name:s.player?.fullName||'—', hr:s.stat?.homeRuns||0 })) || [];
-    // Fetch bat handedness for any player not already in batHandCache
-    await Promise.all(list.filter(p => p.id && !batHandCache[p.id]).map(p => fetchBatHand(p.id)));
+          .stats?.[0]?.splits?.map(s=>({ id:s.player?.id, name:s.player?.fullName||'—', hr:s.stat?.homeRuns||0, vsL:null, vsR:null })) || [];
+    // Fetch bat handedness and platoon splits in parallel
+    await Promise.all([
+      ...list.filter(p => p.id && !batHandCache[p.id]).map(p => fetchBatHand(p.id)),
+      ...list.filter(p => p.id && !hitterPlatoonCache[p.id]).map(p =>
+        fetchHitterPlatoonSplits(p.id).then(r => { p.vsL = r.vsL; p.vsR = r.vsR; })
+      )
+    ]);
+    // Fill in splits for players already cached
+    list.forEach(p => {
+      if (p.id && hitterPlatoonCache[p.id]) {
+        p.vsL = hitterPlatoonCache[p.id].vsL;
+        p.vsR = hitterPlatoonCache[p.id].vsR;
+      }
+    });
     return list;
   } catch { return []; }
 }
@@ -1055,18 +1097,27 @@ async function fetchGameHREvents(gamePk) {
 function renderHitters(alertIds) {
   const max = hitters[0]?.hr||1;
   const ranks = tiedRanks(hitters, 'hr');
+  const todayHitterIds = new Set(todayGames.flatMap(g => [...(g.away.lineup||[]), ...(g.home.lineup||[])].map(p=>p.id||p)));
   document.getElementById('hitters-body').innerHTML = hitters.map((p,i)=>{
-    const isAlert = alertIds?.has(p.id);
-    const hBadge  = handBadge(p.hand);
-    const tc = teamColor(p.team);
+    const isAlert  = alertIds?.has(p.id);
+    const isToday  = todayHitterIds.has(p.id);
+    const hBadge   = handBadge(p.hand);
+    const tc       = teamColor(p.team);
     const rowStyle = tc ? `style="background:${tc}12;border-left:2px solid ${tc}55;"` : '';
+    const safeName = (p.name||'').replace(/'/g, "\\'");
+    const todayBadge = isToday
+      ? '<span style="font-family:var(--font-mono);font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:5px;background:rgba(250,204,21,0.2);color:var(--accent-gold);border:1px solid rgba(250,204,21,0.4);letter-spacing:0.08em;">PLAYING TODAY</span>'
+      : '';
+    const vsLCell = `<td class="stat-val" style="color:#60a5fa;font-size:11px;text-align:center;">${p.vsL !== null && p.vsL !== undefined ? p.vsL : '—'}</td>`;
+    const vsRCell = `<td class="stat-val" style="color:var(--accent-red);font-size:11px;text-align:center;">${p.vsR !== null && p.vsR !== undefined ? p.vsR : '—'}</td>`;
     return `<tr class="${isAlert?'hl-blue':''}" ${isAlert?'':rowStyle}>
       <td class="rank">${ranks[i]}</td>
       <td style="width:20px;padding-right:4px;">${hBadge}</td>
       <td>
-        <div class="player-name" onclick="openPlayerModal(${p.id},'${(p.name||'').replace(/'/g,"\\'")}','${p.team}')" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}</div>
+        <div class="player-name" onclick="openPlayerModal(${p.id},'${safeName}','${p.team}',${p.vsL??'null'},${p.vsR??'null'})" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}${todayBadge}</div>
       </td>
       <td class="stat-val blue">${p.hr}</td>
+      ${vsLCell}${vsRCell}
       <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill blue" style="width:${Math.round(p.hr/max*100)}%"></div></div></td>
     </tr>`;
   }).join('');
@@ -1376,10 +1427,13 @@ async function renderGames(alerts, noHRAlerts) {
       return (arr||[]).map(p=>{
         const isTop25 = hitterIds.has(p.id);
         const batHand = batHandCache[p.id];
-        return `<div class="hitter-row" onclick="event.stopPropagation();openPlayerModal(${p.id},'${(p.name||'').replace(/'/g,"\'")}','${teamAbbr}')" style="cursor:pointer;border-radius:4px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background=''">
+        const vsLStr  = p.vsL !== null && p.vsL !== undefined ? p.vsL : '—';
+        const vsRStr  = p.vsR !== null && p.vsR !== undefined ? p.vsR : '—';
+        const splitBadge = `<span style="font-family:'IBM Plex Mono',monospace;font-size:9px;margin-left:6px;"><span style="color:#60a5fa;">vL:${vsLStr}</span> <span style="color:var(--text-dim);">|</span> <span style="color:var(--accent-red);">vR:${vsRStr}</span></span>`;
+        return `<div class="hitter-row" onclick="event.stopPropagation();openPlayerModal(${p.id},'${(p.name||'').replace(/'/g,"\'")}','${teamAbbr}',${p.vsL??'null'},${p.vsR??'null'})" style="cursor:pointer;border-radius:4px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background=''">
           <div class="hitter-row-name">
             ${batHand ? handBadge(batHand) : ''}
-            ${p.name}${isTop25?`<span class="top25-badge">#${hitterMap[p.id]?.rank} TOP 25</span>`:''}
+            ${p.name}${isTop25?`<span class="top25-badge">#${hitterMap[p.id]?.rank} TOP 25</span>`:''}${splitBadge}
           </div>
           <div class="hitter-row-hr">${p.hr} HR</div>
         </div>`;
