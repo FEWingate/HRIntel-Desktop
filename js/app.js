@@ -1097,24 +1097,19 @@ async function fetchGameHREvents(gamePk) {
 function renderHitters(alertIds) {
   const max = hitters[0]?.hr||1;
   const ranks = tiedRanks(hitters, 'hr');
-  const todayHitterIds = new Set(todayGames.flatMap(g => [...(g.away.lineup||[]), ...(g.home.lineup||[])].map(p=>p.id||p)));
   document.getElementById('hitters-body').innerHTML = hitters.map((p,i)=>{
     const isAlert  = alertIds?.has(p.id);
-    const isToday  = todayHitterIds.has(p.id);
     const hBadge   = handBadge(p.hand);
     const tc       = teamColor(p.team);
     const rowStyle = tc ? `style="background:${tc}12;border-left:2px solid ${tc}55;"` : '';
     const safeName = (p.name||'').replace(/'/g, "\\'");
-    const todayBadge = isToday
-      ? '<span style="font-family:var(--font-mono);font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:5px;background:rgba(250,204,21,0.2);color:var(--accent-gold);border:1px solid rgba(250,204,21,0.4);letter-spacing:0.08em;">PLAYING TODAY</span>'
-      : '';
     const vsLCell = `<td class="stat-val" style="color:#60a5fa;font-size:11px;text-align:center;">${p.vsL !== null && p.vsL !== undefined ? p.vsL : '—'}</td>`;
     const vsRCell = `<td class="stat-val" style="color:var(--accent-red);font-size:11px;text-align:center;">${p.vsR !== null && p.vsR !== undefined ? p.vsR : '—'}</td>`;
     return `<tr class="${isAlert?'hl-blue':''}" ${isAlert?'':rowStyle}>
       <td class="rank">${ranks[i]}</td>
       <td style="width:20px;padding-right:4px;">${hBadge}</td>
       <td>
-        <div class="player-name" onclick="openPlayerModal(${p.id},'${safeName}','${p.team}',${p.vsL??'null'},${p.vsR??'null'})" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}${todayBadge}</div>
+        <div class="player-name" onclick="openPlayerModal(${p.id},'${safeName}','${p.team}',${p.vsL??'null'},${p.vsR??'null'})" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${p.name} <span class="name-team-tag">${p.team} (${p.league})</span>${isAlert?'<span class="alert-dot"></span>':''}</div>
       </td>
       <td class="stat-val blue">${p.hr}</td>
       ${vsLCell}${vsRCell}
