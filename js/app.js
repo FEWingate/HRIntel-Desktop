@@ -1996,17 +1996,20 @@ async function openPlayerModal(playerId, name, teamAbbr, vsL, vsR) {
   document.getElementById('playerModalOverlay').classList.add('open');
 
   if (playerModalCache[playerId]) {
-    renderPlayerModal(playerModalCache[playerId], tc, vsL, vsR);
+    let curVsL = vsL, curVsR = vsR, curHomeAway = undefined;
+    renderPlayerModal(playerModalCache[playerId], tc, curVsL, curVsR, curHomeAway);
     const pos = playerModalCache[playerId].bioData?.people?.[0]?.primaryPosition?.abbreviation;
     const isPit = pos === 'P' || pos === 'SP' || pos === 'RP' || pos === 'CP';
     if (isPit && vsL === undefined && vsR === undefined) {
       fetchPlatoonSplits(playerId).then(({ vsL: fetchedL, vsR: fetchedR }) => {
-        renderPlayerModal(playerModalCache[playerId], tc, fetchedL, fetchedR);
+        curVsL = fetchedL; curVsR = fetchedR;
+        renderPlayerModal(playerModalCache[playerId], tc, curVsL, curVsR, curHomeAway);
       });
     }
     if (isPit) {
       fetchPitcherHomeAwayK(playerId).then(homeAway => {
-        renderPlayerModal(playerModalCache[playerId], tc, vsL, vsR, homeAway);
+        curHomeAway = homeAway;
+        renderPlayerModal(playerModalCache[playerId], tc, curVsL, curVsR, curHomeAway);
       });
     }
     return;
@@ -2024,19 +2027,22 @@ async function openPlayerModal(playerId, name, teamAbbr, vsL, vsR) {
     ]);
     const data = { bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit };
     playerModalCache[playerId] = data;
-    renderPlayerModal(data, tc, vsL, vsR);
+    let curVsL = vsL, curVsR = vsR, curHomeAway = undefined;
+    renderPlayerModal(data, tc, curVsL, curVsR, curHomeAway);
     // If vsL/vsR weren't pre-loaded (pitcher clicked from outside Top 25 table),
     // fetch splits now and re-render the season stats block if it's a pitcher.
     const pos = data.bioData?.people?.[0]?.primaryPosition?.abbreviation;
     const isPit = pos === 'P' || pos === 'SP' || pos === 'RP' || pos === 'CP';
     if (isPit && vsL === undefined && vsR === undefined) {
       fetchPlatoonSplits(playerId).then(({ vsL: fetchedL, vsR: fetchedR }) => {
-        renderPlayerModal(data, tc, fetchedL, fetchedR);
+        curVsL = fetchedL; curVsR = fetchedR;
+        renderPlayerModal(data, tc, curVsL, curVsR, curHomeAway);
       });
     }
     if (isPit) {
       fetchPitcherHomeAwayK(playerId).then(homeAway => {
-        renderPlayerModal(data, tc, vsL, vsR, homeAway);
+        curHomeAway = homeAway;
+        renderPlayerModal(data, tc, curVsL, curVsR, curHomeAway);
       });
     }
   } catch(e) {
