@@ -484,11 +484,12 @@ async function fetchPitcherHomeAwayK(pitcherId) {
     const url = `${BASE}/people/${pitcherId}/stats?stats=statSplits&group=pitching&season=${SEASON}&sitCodes=h,a&sportId=1`;
     const sd = await fetchJSON(url);
     const splits = sd.stats?.[0]?.splits || [];
+    if (window._debugHomeAway) console.log('HOME/AWAY K DEBUG for', pitcherId, JSON.stringify(splits));
     let homeK = null, awayK = null, homeGP = null, awayGP = null;
     for (const s of splits) {
       const code = (s.split?.code || s.split?.description || '').toLowerCase();
       if (code === 'h' || /home/i.test(code)) { homeK = s.stat?.strikeOuts ?? null; homeGP = s.stat?.gamesPlayed ?? null; }
-      if (code === 'a' || /away/i.test(code)) { awayK = s.stat?.strikeOuts ?? null; awayGP = s.stat?.gamesPlayed ?? null; }
+      if (code === 'a' || code === 'r' || /away/i.test(code) || /road/i.test(code)) { awayK = s.stat?.strikeOuts ?? null; awayGP = s.stat?.gamesPlayed ?? null; }
     }
     if (homeK === null && awayK === null && splits.length >= 2) {
       homeK  = splits[0]?.stat?.strikeOuts ?? null;
@@ -499,7 +500,7 @@ async function fetchPitcherHomeAwayK(pitcherId) {
     const result = { homeK, awayK, homeGP, awayGP };
     pitcherHomeAwayCache[pitcherId] = result;
     return result;
-  } catch { return { homeK: null, awayK: null, homeGP: null, awayGP: null }; }
+  } catch(e) { if (window._debugHomeAway) console.log('HOME/AWAY K FETCH ERROR', e); return { homeK: null, awayK: null, homeGP: null, awayGP: null }; }
 }
 
 // ── TEAM LEAGUE CACHE ────────────────────────────────────────────────
