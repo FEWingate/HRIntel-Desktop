@@ -498,9 +498,17 @@ async function fetchPitcherHomeAwayK(pitcherId) {
       awayGP = splits[1]?.stat?.gamesPlayed ?? null;
     }
     const result = { homeK, awayK, homeGP, awayGP };
-    pitcherHomeAwayCache[pitcherId] = result;
+    // Only cache results that actually contain data — never cache a null/empty
+    // result, so a transient fetch failure or empty response can be retried
+    // on the next click instead of permanently showing blank cards.
+    if (homeK !== null || awayK !== null) {
+      pitcherHomeAwayCache[pitcherId] = result;
+    }
     return result;
-  } catch(e) { if (window._debugHomeAway) console.log('HOME/AWAY K FETCH ERROR', e); return { homeK: null, awayK: null, homeGP: null, awayGP: null }; }
+  } catch(e) {
+    if (window._debugHomeAway) console.log('HOME/AWAY K FETCH ERROR', pitcherId, e);
+    return { homeK: null, awayK: null, homeGP: null, awayGP: null };
+  }
 }
 
 // ── TEAM LEAGUE CACHE ────────────────────────────────────────────────
