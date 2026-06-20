@@ -475,6 +475,33 @@ async function fetchHitterPlatoonSplits(hitterId) {
   } catch { return { vsL: null, vsR: null }; }
 }
 
+// ── PITCHER HOME/ROAD STRIKEOUT SPLITS ────────────────────────────────
+const pitcherHomeAwayCache = {};
+async function fetchPitcherHomeAwayK(pitcherId) {
+  if (!pitcherId) return { homeK: null, awayK: null, homeGP: null, awayGP: null };
+  if (pitcherHomeAwayCache[pitcherId]) return pitcherHomeAwayCache[pitcherId];
+  try {
+    const url = `${BASE}/people/${pitcherId}/stats?stats=statSplits&group=pitching&season=${SEASON}&sitCodes=h,a&sportId=1`;
+    const sd = await fetchJSON(url);
+    const splits = sd.stats?.[0]?.splits || [];
+    let homeK = null, awayK = null, homeGP = null, awayGP = null;
+    for (const s of splits) {
+      const code = (s.split?.code || s.split?.description || '').toLowerCase();
+      if (code === 'h' || /home/i.test(code)) { homeK = s.stat?.strikeOuts ?? null; homeGP = s.stat?.gamesPlayed ?? null; }
+      if (code === 'a' || /away/i.test(code)) { awayK = s.stat?.strikeOuts ?? null; awayGP = s.stat?.gamesPlayed ?? null; }
+    }
+    if (homeK === null && awayK === null && splits.length >= 2) {
+      homeK  = splits[0]?.stat?.strikeOuts ?? null;
+      homeGP = splits[0]?.stat?.gamesPlayed ?? null;
+      awayK  = splits[1]?.stat?.strikeOuts ?? null;
+      awayGP = splits[1]?.stat?.gamesPlayed ?? null;
+    }
+    const result = { homeK, awayK, homeGP, awayGP };
+    pitcherHomeAwayCache[pitcherId] = result;
+    return result;
+  } catch { return { homeK: null, awayK: null, homeGP: null, awayGP: null }; }
+}
+
 // ── TEAM LEAGUE CACHE ────────────────────────────────────────────────
 const teamLeagueCache = {}; // teamId (string) -> 'A' or 'N'
 const teamAbbrCache   = {}; // teamId (string) -> abbreviation
@@ -563,11 +590,24 @@ async function fetchKOPitchers() {
       k,
       games,
       kpg,
-      hand:   null
+      hand:   null,
+      homeK:  null,
+      awayK:  null,
+      homeKpg: null,
+      awayKpg: null
     };
   });
   const hands = await Promise.all(list.map(p=>fetchHandedness(p.id)));
   list.forEach((p,i)=>p.hand=hands[i]);
+  // Fetch home/road K splits for all 25 strikeout pitchers in parallel
+  const homeAway = await Promise.all(list.map(p => fetchPitcherHomeAwayK(p.id)));
+  list.forEach((p, i) => {
+    const r = homeAway[i];
+    p.homeK = r.homeK;
+    p.awayK = r.awayK;
+    p.homeKpg = (r.homeK !== null && r.homeGP) ? (r.homeK / r.homeGP).toFixed(1) : null;
+    p.awayKpg = (r.awayK !== null && r.awayGP) ? (r.awayK / r.awayGP).toFixed(1) : null;
+  });
   return list;
 }
 
@@ -1183,6 +1223,8 @@ function renderKOPitchers() {
       ? '<span style="font-family:var(--font-mono);font-size:8px;padding:1px 5px;border-radius:3px;margin-left:4px;background:rgba(230,57,70,0.15);color:var(--accent-red);border:1px solid rgba(230,57,70,0.3);">TOP 25 HR</span>'
       : '';
     const safeKoName = (p.name||'').replace(/'/g, "\\'");
+    const homeKCell = `<td class="stat-val" style="color:#60a5fa;font-size:11px;text-align:center;">${p.homeK !== null && p.homeK !== undefined ? p.homeK + (p.homeKpg ? ' · '+p.homeKpg+'/G' : '') : '—'}</td>`;
+    const awayKCell = `<td class="stat-val" style="color:var(--accent-red);font-size:11px;text-align:center;">${p.awayK !== null && p.awayK !== undefined ? p.awayK + (p.awayKpg ? ' · '+p.awayKpg+'/G' : '') : '—'}</td>`;
     return `<tr class="${pulseClass}" ${!isToday?rowStyle:''}>
       <td class="rank">${ranks[i]}</td>
       <td style="width:20px;padding-right:4px;">${hBadge}</td>
@@ -1190,6 +1232,7 @@ function renderKOPitchers() {
       <td class="stat-val" style="color:var(--text-mid);font-size:11px;">${p.games}</td>
       <td class="stat-val purple">${p.k}</td>
       <td class="stat-val" style="color:var(--text-mid);font-size:11px;">${p.kpg}</td>
+      ${homeKCell}${awayKCell}
       <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill purple" style="width:${Math.round(p.k/max*100)}%"></div></div></td>
     </tr>`;
   }).join('');
@@ -1960,6 +2003,11 @@ async function openPlayerModal(playerId, name, teamAbbr, vsL, vsR) {
         renderPlayerModal(playerModalCache[playerId], tc, fetchedL, fetchedR);
       });
     }
+    if (isPit) {
+      fetchPitcherHomeAwayK(playerId).then(homeAway => {
+        renderPlayerModal(playerModalCache[playerId], tc, vsL, vsR, homeAway);
+      });
+    }
     return;
   }
 
@@ -1985,13 +2033,18 @@ async function openPlayerModal(playerId, name, teamAbbr, vsL, vsR) {
         renderPlayerModal(data, tc, fetchedL, fetchedR);
       });
     }
+    if (isPit) {
+      fetchPitcherHomeAwayK(playerId).then(homeAway => {
+        renderPlayerModal(data, tc, vsL, vsR, homeAway);
+      });
+    }
   } catch(e) {
     console.warn('Player modal fetch failed:', e);
     document.getElementById('playerModalMeta').textContent = 'Failed to load player data';
   }
 }
 
-function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit }, tc, vsL, vsR) {
+function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit, gameLogHit, gameLogPit }, tc, vsL, vsR, homeAway) {
   const person = bioData?.people?.[0];
   if (!person) return;
 
@@ -2062,6 +2115,22 @@ function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit
       <div style="flex:1;background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.25);border-radius:6px;padding:8px 0;text-align:center;">
         <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:4px;">HR VS R</div>
         <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--accent-red);">${vsR !== null && vsR !== undefined ? vsR : '—'}</div>
+      </div>
+    </div>`;
+  }
+  if (isPitcher && homeAway && (homeAway.homeK !== null && homeAway.homeK !== undefined || homeAway.awayK !== null && homeAway.awayK !== undefined)) {
+    const homeKpg = (homeAway.homeK !== null && homeAway.homeGP) ? (homeAway.homeK / homeAway.homeGP).toFixed(1) : null;
+    const awayKpg = (homeAway.awayK !== null && homeAway.awayGP) ? (homeAway.awayK / homeAway.awayGP).toFixed(1) : null;
+    seasonHTML += `<div style="display:flex;gap:8px;margin-top:8px;">
+      <div style="flex:1;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.25);border-radius:6px;padding:8px 0;text-align:center;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:4px;">K HOME</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:#60a5fa;">${homeAway.homeK !== null && homeAway.homeK !== undefined ? homeAway.homeK : '—'}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:2px;">${homeKpg ? homeKpg+'/G' : '—'}</div>
+      </div>
+      <div style="flex:1;background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.25);border-radius:6px;padding:8px 0;text-align:center;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:4px;">K ROAD</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--accent-red);">${homeAway.awayK !== null && homeAway.awayK !== undefined ? homeAway.awayK : '—'}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:2px;">${awayKpg ? awayKpg+'/G' : '—'}</div>
       </div>
     </div>`;
   }
