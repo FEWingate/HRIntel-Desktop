@@ -372,14 +372,33 @@ async function fetchTeamHRLeaderboard() {
   } catch { return []; }
 }
 
-// ── TEAM STRIKEOUT LEADERBOARD (team pitching staff totals) ──────────
+// ── TEAM STRIKEOUT LEADERBOARD (team batting/offense — how often this team's hitters strike out) ──
 async function fetchTeamKLeaderboard() {
   await buildLeagueCache();
   try {
-    // Single batched call across all pitchers, aggregated by team — same
-    // pattern as fetchTeamHRLeaderboard, just grouped by pitching instead.
-    const d2 = await fetchJSON(`${BASE}/stats?stats=season&group=pitching&season=${SEASON}&sportId=1&gameType=R&playerPool=ALL&limit=2000`);
+    // Single batched call across all hitters, aggregated by team — same
+    // pattern as fetchTeamHRLeaderboard, just summing strikeOuts instead of homeRuns.
+    const [d2, standingsData] = await Promise.all([
+      fetchJSON(`${BASE}/stats?stats=season&group=hitting&season=${SEASON}&sportId=1&gameType=R&playerPool=ALL&limit=2000`),
+      fetchJSON(`${BASE}/standings?leagueId=103,104&season=${SEASON}&standingsTypes=regularSeason&hydrate=team`).catch(()=>null)
+    ]);
     const splits = d2.stats?.[0]?.splits||[];
+
+    // Build a teamId -> games played map from real team standings (wins+losses),
+    // NOT from individual pitcher appearance counts. A single pitcher's
+    // gamesPlayed (e.g. a closer with 60 appearances) is nowhere close to the
+    // team's actual ~162 game season, and using it as a divisor was producing
+    // wildly inflated K/G numbers (20+ K/G, which is impossible in a 9-inning game).
+    const teamGamesMap = {};
+    if (standingsData?.records) {
+      for (const div of standingsData.records) {
+        for (const r of (div.teamRecords||[])) {
+          const tid = r.team?.id;
+          if (tid) teamGamesMap[tid] = (r.wins||0) + (r.losses||0);
+        }
+      }
+    }
+
     const teamMap = {};
     for (const s of splits) {
       const id = s.team?.id;
@@ -391,7 +410,7 @@ async function fetchTeamKLeaderboard() {
           abbr: getTeamAbbr(id, s.team?.abbreviation||'—'),
           league: getLeague(id),
           k: 0,
-          games: 0,
+          games: teamGamesMap[id] || 0,
           homeK: null,
           awayK: null,
           homeKpg: null,
@@ -399,16 +418,13 @@ async function fetchTeamKLeaderboard() {
         };
       }
       teamMap[id].k += (s.stat?.strikeOuts||0);
-      // gamesPlayed/gamesPitched is per-pitcher; take the team's max games played
-      // as a season-length proxy so K/G reflects games, not innings.
-      teamMap[id].games = Math.max(teamMap[id].games, s.stat?.gamesPlayed||s.stat?.gamesPitched||0);
     }
     const result = Object.values(teamMap);
     result.forEach(t => { t.kpg = t.games > 0 ? (t.k / t.games).toFixed(1) : '—'; });
     result.sort((a,b)=>b.k-a.k);
     if (!result.length) return [];
 
-    // Fetch home/road K splits for all 30 teams in parallel
+    // Fetch home/road strikeout splits (team batting) for all 30 teams in parallel
     const homeAway = await Promise.all(result.map(t => fetchTeamHomeAwayK(t.teamId)));
     result.forEach((t, i) => {
       const r = homeAway[i];
@@ -426,7 +442,7 @@ async function fetchTeamHomeAwayK(teamId) {
   if (!teamId) return { homeK: null, awayK: null, homeGP: null, awayGP: null };
   if (teamHomeAwayKCache[teamId]) return teamHomeAwayKCache[teamId];
   try {
-    const url = `${BASE}/teams/${teamId}/stats?stats=statSplits&group=pitching&season=${SEASON}&sitCodes=h,a&sportId=1`;
+    const url = `${BASE}/teams/${teamId}/stats?stats=statSplits&group=hitting&season=${SEASON}&sitCodes=h,a&sportId=1`;
     const sd = await fetchJSON(url);
     const splits = sd.stats?.[0]?.splits || [];
     let homeK = null, awayK = null, homeGP = null, awayGP = null;
@@ -1407,10 +1423,10 @@ function renderTeamKLeaderboard() {
       <td>
         <div class="player-name" onclick="openTeamModal('${t.abbr}','${(t.name||'').replace(/'/g,"\\'")}');" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${t.name} <span class="name-team-tag">${t.abbr} (${t.league})</span></div>
       </td>
-      <td class="stat-val purple">${t.k}</td>
+      <td class="stat-val" style="color:var(--accent-red);">${t.k}</td>
       <td class="stat-val" style="color:var(--text-mid);font-size:11px;">${t.kpg}</td>
       ${homeKCell}${awayKCell}
-      <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill purple" style="width:${Math.round(t.k/max*100)}%"></div></div></td>
+      <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="background:var(--accent-red);width:${Math.round(t.k/max*100)}%"></div></div></td>
     </tr>`;
   }).join('');
 }
