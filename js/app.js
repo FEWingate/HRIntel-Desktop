@@ -376,50 +376,37 @@ async function fetchTeamHRLeaderboard() {
 async function fetchTeamKLeaderboard() {
   await buildLeagueCache();
   try {
-    // Single batched call across all hitters, aggregated by team — same
-    // pattern as fetchTeamHRLeaderboard, just summing strikeOuts instead of homeRuns.
-    const [d2, standingsData] = await Promise.all([
-      fetchJSON(`${BASE}/stats?stats=season&group=hitting&season=${SEASON}&sportId=1&gameType=R&playerPool=ALL&limit=2000`),
-      fetchJSON(`${BASE}/standings?leagueId=103,104&season=${SEASON}&standingsTypes=regularSeason&hydrate=team`).catch(()=>null)
-    ]);
-    const splits = d2.stats?.[0]?.splits||[];
+    // Get the list of all 30 teams with their abbreviations/league first.
+    const teamsData = await fetchJSON(`${BASE}/teams?sportId=1&season=${SEASON}&sportIds=1`);
+    const teams = (teamsData.teams||[]).filter(t=>t.sport?.id===1);
+    if (!teams.length) return [];
 
-    // Build a teamId -> games played map from real team standings (wins+losses),
-    // NOT from individual pitcher appearance counts. A single pitcher's
-    // gamesPlayed (e.g. a closer with 60 appearances) is nowhere close to the
-    // team's actual ~162 game season, and using it as a divisor was producing
-    // wildly inflated K/G numbers (20+ K/G, which is impossible in a 9-inning game).
-    const teamGamesMap = {};
-    if (standingsData?.records) {
-      for (const div of standingsData.records) {
-        for (const r of (div.teamRecords||[])) {
-          const tid = r.team?.id;
-          if (tid) teamGamesMap[tid] = (r.wins||0) + (r.losses||0);
-        }
-      }
-    }
-
-    const teamMap = {};
-    for (const s of splits) {
-      const id = s.team?.id;
-      if (!id) continue;
-      if (!teamMap[id]) {
-        teamMap[id] = {
-          teamId: id,
-          name: s.team?.name||getTeamAbbr(id,'—'),
-          abbr: getTeamAbbr(id, s.team?.abbreviation||'—'),
-          league: getLeague(id),
-          k: 0,
-          games: teamGamesMap[id] || 0,
-          homeK: null,
-          awayK: null,
-          homeKpg: null,
-          awayKpg: null
+    // For each team, fetch its REAL team-level season hitting stats (not an
+    // aggregate reconstructed from individual players — that approach was
+    // undercounting because the batched all-hitters call silently dropped
+    // some at-bats, e.g. for players who changed teams mid-season). This is
+    // the same teams/{teamId}/stats?stats=season endpoint already proven
+    // correct in the team modal's "Team Batting" card.
+    const result = await Promise.all(teams.map(async t => {
+      try {
+        const ts = await fetchJSON(`${BASE}/teams/${t.id}/stats?stats=season&group=hitting&season=${SEASON}&sportId=1`);
+        const stat = ts.stats?.[0]?.splits?.[0]?.stat;
+        return {
+          teamId: t.id,
+          name: t.name || getTeamAbbr(t.id,'—'),
+          abbr: getTeamAbbr(t.id, t.abbreviation||'—'),
+          league: getLeague(t.id),
+          k: stat?.strikeOuts || 0,
+          games: stat?.gamesPlayed || 0,
+          homeK: null, awayK: null, homeKpg: null, awayKpg: null
+        };
+      } catch {
+        return {
+          teamId: t.id, name: t.name||getTeamAbbr(t.id,'—'), abbr: getTeamAbbr(t.id,'—'),
+          league: getLeague(t.id), k: 0, games: 0, homeK: null, awayK: null, homeKpg: null, awayKpg: null
         };
       }
-      teamMap[id].k += (s.stat?.strikeOuts||0);
-    }
-    const result = Object.values(teamMap);
+    }));
     result.forEach(t => { t.kpg = t.games > 0 ? (t.k / t.games).toFixed(1) : '—'; });
     result.sort((a,b)=>b.k-a.k);
     if (!result.length) return [];
@@ -432,6 +419,11 @@ async function fetchTeamKLeaderboard() {
       t.awayK = r.awayK;
       t.homeKpg = (r.homeK !== null && r.homeGP) ? (r.homeK / r.homeGP).toFixed(1) : null;
       t.awayKpg = (r.awayK !== null && r.awayGP) ? (r.awayK / r.awayGP).toFixed(1) : null;
+      // Sanity check: home+road should equal the season total since both now
+      // come from real MLB team-level stats. Flag any mismatch for visibility.
+      if (t.homeK !== null && t.awayK !== null && Math.abs((t.homeK + t.awayK) - t.k) > 1) {
+        console.warn(`Team K mismatch for ${t.abbr}: season=${t.k}, home+road=${t.homeK + t.awayK}`);
+      }
     });
     return result;
   } catch { return []; }
