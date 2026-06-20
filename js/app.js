@@ -267,7 +267,7 @@ let hitters=[], hrPitchers=[], koPitchers=[], venues=[], todayGames=[];
 const _gameHRCache = {}; // gamePk -> { events: [{name,team,playerId,inning,type}], ts: timestamp }
 let _hotColdWindow = 'L5'; // current toggle state
 let _hotColdData   = null; // cached { L5: [...], L10: [...] }
-let noHRPitchersAL=[], noHRPitchersNL=[], noHRTeams=[], teamHRLeaderboard=[];
+let noHRPitchersAL=[], noHRPitchersNL=[], noHRTeams=[], teamHRLeaderboard=[], teamKLeaderboard=[];
 
 // ── UTILS ──────────────────────────────────────────────────────────
 async function fetchJSON(url) {
@@ -370,6 +370,85 @@ async function fetchTeamHRLeaderboard() {
     if (result.length) return result;
     return [];
   } catch { return []; }
+}
+
+// ── TEAM STRIKEOUT LEADERBOARD (team pitching staff totals) ──────────
+async function fetchTeamKLeaderboard() {
+  await buildLeagueCache();
+  try {
+    // Single batched call across all pitchers, aggregated by team — same
+    // pattern as fetchTeamHRLeaderboard, just grouped by pitching instead.
+    const d2 = await fetchJSON(`${BASE}/stats?stats=season&group=pitching&season=${SEASON}&sportId=1&gameType=R&playerPool=ALL&limit=2000`);
+    const splits = d2.stats?.[0]?.splits||[];
+    const teamMap = {};
+    for (const s of splits) {
+      const id = s.team?.id;
+      if (!id) continue;
+      if (!teamMap[id]) {
+        teamMap[id] = {
+          teamId: id,
+          name: s.team?.name||getTeamAbbr(id,'—'),
+          abbr: getTeamAbbr(id, s.team?.abbreviation||'—'),
+          league: getLeague(id),
+          k: 0,
+          games: 0,
+          homeK: null,
+          awayK: null,
+          homeKpg: null,
+          awayKpg: null
+        };
+      }
+      teamMap[id].k += (s.stat?.strikeOuts||0);
+      // gamesPlayed/gamesPitched is per-pitcher; take the team's max games played
+      // as a season-length proxy so K/G reflects games, not innings.
+      teamMap[id].games = Math.max(teamMap[id].games, s.stat?.gamesPlayed||s.stat?.gamesPitched||0);
+    }
+    const result = Object.values(teamMap);
+    result.forEach(t => { t.kpg = t.games > 0 ? (t.k / t.games).toFixed(1) : '—'; });
+    result.sort((a,b)=>b.k-a.k);
+    if (!result.length) return [];
+
+    // Fetch home/road K splits for all 30 teams in parallel
+    const homeAway = await Promise.all(result.map(t => fetchTeamHomeAwayK(t.teamId)));
+    result.forEach((t, i) => {
+      const r = homeAway[i];
+      t.homeK = r.homeK;
+      t.awayK = r.awayK;
+      t.homeKpg = (r.homeK !== null && r.homeGP) ? (r.homeK / r.homeGP).toFixed(1) : null;
+      t.awayKpg = (r.awayK !== null && r.awayGP) ? (r.awayK / r.awayGP).toFixed(1) : null;
+    });
+    return result;
+  } catch { return []; }
+}
+
+const teamHomeAwayKCache = {};
+async function fetchTeamHomeAwayK(teamId) {
+  if (!teamId) return { homeK: null, awayK: null, homeGP: null, awayGP: null };
+  if (teamHomeAwayKCache[teamId]) return teamHomeAwayKCache[teamId];
+  try {
+    const url = `${BASE}/teams/${teamId}/stats?stats=statSplits&group=pitching&season=${SEASON}&sitCodes=h,a&sportId=1`;
+    const sd = await fetchJSON(url);
+    const splits = sd.stats?.[0]?.splits || [];
+    let homeK = null, awayK = null, homeGP = null, awayGP = null;
+    for (const s of splits) {
+      const code = (s.split?.code || s.split?.description || '').toLowerCase();
+      if (code === 'h' || /home/i.test(code)) { homeK = s.stat?.strikeOuts ?? null; homeGP = s.stat?.gamesPlayed ?? null; }
+      if (code === 'a' || code === 'r' || /away/i.test(code) || /road/i.test(code)) { awayK = s.stat?.strikeOuts ?? null; awayGP = s.stat?.gamesPlayed ?? null; }
+    }
+    if (homeK === null && awayK === null && splits.length >= 2) {
+      homeK  = splits[0]?.stat?.strikeOuts ?? null;
+      homeGP = splits[0]?.stat?.gamesPlayed ?? null;
+      awayK  = splits[1]?.stat?.strikeOuts ?? null;
+      awayGP = splits[1]?.stat?.gamesPlayed ?? null;
+    }
+    const result = { homeK, awayK, homeGP, awayGP };
+    // Only cache successful results — don't permanently cache a transient
+    // failure or empty response (same lesson learned from the pitcher version).
+    if (homeK !== null || awayK !== null) {
+      teamHomeAwayKCache[teamId] = result;
+    }
+    return result;
+  } catch { return { homeK: null, awayK: null, homeGP: null, awayGP: null }; }
 }
 function setProgress(pct, msg) {
   document.getElementById('loadingBar').style.width = pct+'%';
@@ -1313,6 +1392,28 @@ function renderTeamHRLeaderboard() {
     </tr>`;
   }).join('');
 }
+
+// ── RENDER TEAM STRIKEOUT LEADERBOARD (with K/G and Home/Road splits) ─
+function renderTeamKLeaderboard() {
+  const max = teamKLeaderboard[0]?.k||1;
+  const ranks = tiedRanks(teamKLeaderboard, 'k');
+  document.getElementById('team-k-body').innerHTML = teamKLeaderboard.map((t,i)=>{
+    const tc = teamColor(t.abbr);
+    const rowStyle = tc ? `style="background:${tc}12;border-left:2px solid ${tc}55;"` : '';
+    const homeKCell = `<td class="stat-val" style="color:#60a5fa;font-size:11px;text-align:center;">${t.homeK !== null && t.homeK !== undefined ? t.homeK + (t.homeKpg ? ' · '+t.homeKpg+'/G' : '') : '—'}</td>`;
+    const awayKCell = `<td class="stat-val" style="color:var(--accent-red);font-size:11px;text-align:center;">${t.awayK !== null && t.awayK !== undefined ? t.awayK + (t.awayKpg ? ' · '+t.awayKpg+'/G' : '') : '—'}</td>`;
+    return `<tr ${rowStyle}>
+      <td class="rank">${ranks[i]}</td>
+      <td>
+        <div class="player-name" onclick="openTeamModal('${t.abbr}','${(t.name||'').replace(/'/g,"\\'")}');" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px;">${t.name} <span class="name-team-tag">${t.abbr} (${t.league})</span></div>
+      </td>
+      <td class="stat-val purple">${t.k}</td>
+      <td class="stat-val" style="color:var(--text-mid);font-size:11px;">${t.kpg}</td>
+      ${homeKCell}${awayKCell}
+      <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill purple" style="width:${Math.round(t.k/max*100)}%"></div></div></td>
+    </tr>`;
+  }).join('');
+}
 function liveScoreHTML(game) {
   const awayTc = teamColor(game.away.team)||'transparent';
   const homeTc = teamColor(game.home.team)||'transparent';
@@ -1643,6 +1744,9 @@ async function initDashboard() {
   setProgress(52,'FETCHING TEAM HR TOTALS...');
   try { teamHRLeaderboard = await fetchTeamHRLeaderboard(); } catch(e) { teamHRLeaderboard=[]; }
 
+  setProgress(54,'FETCHING TEAM STRIKEOUT TOTALS...');
+  try { teamKLeaderboard = await fetchTeamKLeaderboard(); } catch(e) { teamKLeaderboard=[]; }
+
   setProgress(56,'LOADING TODAY\'S SCHEDULE...');
   try { todayGames = await fetchTodayGames(); } catch(e) { todayGames=[]; }
 
@@ -1702,6 +1806,9 @@ async function initDashboard() {
 
   if (teamHRLeaderboard.length) renderTeamHRLeaderboard();
   else document.getElementById('team-hr-body').innerHTML = noDataMsg('Team stats loading');
+
+  if (teamKLeaderboard.length) renderTeamKLeaderboard();
+  else document.getElementById('team-k-body').innerHTML = noDataMsg('Team strikeout stats loading');
 
   renderAlerts(alerts);
   renderNoHRAlerts(noHRAlerts);
@@ -1946,6 +2053,9 @@ function switchTopNav(tab, btn) {
     const srcK = document.getElementById('ko-body');
     const dstK = document.getElementById('ko-body-v2');
     if (srcK && dstK && !dstK.children.length) dstK.innerHTML = srcK.innerHTML;
+    const srcTK = document.getElementById('team-k-body');
+    const dstTK = document.getElementById('team-k-body-v2');
+    if (srcTK && dstTK && !dstTK.children.length) dstTK.innerHTML = srcTK.innerHTML;
   }
 }
 
