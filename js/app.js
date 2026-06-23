@@ -2138,6 +2138,12 @@ async function openPlayerModal(playerId, name, teamAbbr, vsL, vsR) {
         renderPlayerModal(playerModalCache[playerId], tc, curVsL, curVsR, curHomeAway);
       });
     }
+    if (!isPit && vsL === undefined && vsR === undefined) {
+      fetchHitterPlatoonSplits(playerId).then(({ vsL: fetchedL, vsR: fetchedR }) => {
+        curVsL = fetchedL; curVsR = fetchedR;
+        renderPlayerModal(playerModalCache[playerId], tc, curVsL, curVsR, curHomeAway);
+      });
+    }
     return;
   }
 
@@ -2155,8 +2161,8 @@ async function openPlayerModal(playerId, name, teamAbbr, vsL, vsR) {
     playerModalCache[playerId] = data;
     let curVsL = vsL, curVsR = vsR, curHomeAway = undefined;
     renderPlayerModal(data, tc, curVsL, curVsR, curHomeAway);
-    // If vsL/vsR weren't pre-loaded (pitcher clicked from outside Top 25 table),
-    // fetch splits now and re-render the season stats block if it's a pitcher.
+    // If vsL/vsR weren't pre-loaded (player clicked from outside a Top 25 table),
+    // fetch splits now and re-render the season stats block accordingly.
     const pos = data.bioData?.people?.[0]?.primaryPosition?.abbreviation;
     const isPit = pos === 'P' || pos === 'SP' || pos === 'RP' || pos === 'CP';
     if (isPit && vsL === undefined && vsR === undefined) {
@@ -2168,6 +2174,12 @@ async function openPlayerModal(playerId, name, teamAbbr, vsL, vsR) {
     if (isPit) {
       fetchPitcherHomeAwayK(playerId).then(homeAway => {
         curHomeAway = homeAway;
+        renderPlayerModal(data, tc, curVsL, curVsR, curHomeAway);
+      });
+    }
+    if (!isPit && vsL === undefined && vsR === undefined) {
+      fetchHitterPlatoonSplits(playerId).then(({ vsL: fetchedL, vsR: fetchedR }) => {
+        curVsL = fetchedL; curVsR = fetchedR;
         renderPlayerModal(data, tc, curVsL, curVsR, curHomeAway);
       });
     }
@@ -2247,6 +2259,18 @@ function renderPlayerModal({ bioData, seasonHit, seasonPit, careerHit, careerPit
       </div>
       <div style="flex:1;background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.25);border-radius:6px;padding:8px 0;text-align:center;">
         <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:4px;">HR VS R</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--accent-red);">${vsR !== null && vsR !== undefined ? vsR : '—'}</div>
+      </div>
+    </div>`;
+  }
+  if (!isPitcher && (vsL !== null && vsL !== undefined || vsR !== null && vsR !== undefined)) {
+    seasonHTML += `<div style="display:flex;gap:8px;margin-top:10px;">
+      <div style="flex:1;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:6px;padding:8px 0;text-align:center;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:4px;">HR VS LHP</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--accent-blue);">${vsL !== null && vsL !== undefined ? vsL : '—'}</div>
+      </div>
+      <div style="flex:1;background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.25);border-radius:6px;padding:8px 0;text-align:center;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:4px;">HR VS RHP</div>
         <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--accent-red);">${vsR !== null && vsR !== undefined ? vsR : '—'}</div>
       </div>
     </div>`;
